@@ -1,0 +1,8 @@
+[package]
+name = "text"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+libp2p = { workspace = true, features = [ "noise", "tcp", "tokio", "yamux"] }

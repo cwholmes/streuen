@@ -1,4 +1,17 @@
 [workspace]
 members = [
-    "crates/*",
+    "crates/storage",
+    "crates/text",
 ]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+rust-version = "1.88.0"
+edition = "2024"
+
+[workspace.dependencies]
+tokio = { version = "1.46.1", default-features = false }
+libp2p = "0.56.0"
+multiaddr = "0.18.1"
+multihash = "0.19.1"
