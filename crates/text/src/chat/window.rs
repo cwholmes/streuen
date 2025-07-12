@@ -2,7 +2,7 @@ use web_sys::HtmlInputElement;
 use web_sys::console;
 use yew::prelude::*;
 
-use crate::chat_messages::{ChatMessages, Message};
+use crate::chat::messages::{ChatMessages, Message};
 
 const CHAT_WINDOW_CSS: &str = r#"
 .decentral-text-chat-window {
@@ -14,9 +14,18 @@ const CHAT_WINDOW_CSS: &str = r#"
     flex-direction: column;
     flex: 1 1 0%;
     min-width: 0;
-    height: 90vh;
-    margin: 2vh 2vw 2vh 2vw;
+    height: calc(100vh - 60px - 2rem);
+    margin: 1rem;
     overflow: hidden;
+    max-width: 800px;
+    width: 100%;
+}
+@media (max-width: 768px) {
+    .decentral-text-chat-window {
+        margin: 0.5rem;
+        height: calc(100vh - 60px - 1rem);
+        border-radius: 0.5em;
+    }
 }
 .decentral-text-chat-header {
     padding: 1.2em 1.5em 1em 1.5em;

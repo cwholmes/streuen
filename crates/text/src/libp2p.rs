@@ -1,10 +1,10 @@
 use libp2p::StreamProtocol;
 use libp2p::identity;
 use libp2p::request_response;
+use libp2p::swarm::NetworkBehaviour;
 use libp2p::swarm::Swarm;
 use libp2p::webrtc_websys;
 use serde::{Deserialize, Serialize};
-use libp2p::swarm::NetworkBehaviour;
 
 #[derive(NetworkBehaviour)]
 pub(crate) struct ChatBehavior {
@@ -26,14 +26,12 @@ pub(crate) fn build_swarm() -> Result<Swarm<ChatBehavior>, Box<dyn std::error::E
             webrtc_websys::Transport::new(webrtc_websys::Config::new(&key))
         })?
         .with_behaviour(|_| ChatBehavior {
-            request_response: request_response::cbor::Behaviour::<ChatSendMessage, ChatMessageReceived>::new(
-                protocols,
-                request_response::Config::default(),
-            ),
+            request_response: request_response::cbor::Behaviour::<
+                ChatSendMessage,
+                ChatMessageReceived,
+            >::new(protocols, request_response::Config::default()),
         })?
         .build();
-
-    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
 
     Ok(swarm)
 }

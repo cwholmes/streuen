@@ -6,12 +6,13 @@ const USER_PANEL_CSS: &str = r#"
 .decentral-text-sidebar {
     background: #23272a;
     color: #fff;
-    height: 100vh;
+    height: calc(100vh - 60px);
     min-width: 220px;
     max-width: 260px;
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+    overflow: hidden;
 }
 .decentral-text-sidebar h3 {
     font-size: 1.1em;

@@ -27,6 +27,7 @@ features = [
 workspace = true
 features = [
     "console",
+    "Clipboard",
     "HtmlFormElement",
     "HtmlInputElement",
     "HtmlTextAreaElement",
