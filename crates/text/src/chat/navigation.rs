@@ -86,7 +86,6 @@ const NAVIGATION_CSS: &str = r#"
 
 pub enum NavigationMsg {
     ToggleDropdown,
-    CloseDropdown,
     CopyPeerIdToClipboard,
 }
 
@@ -112,18 +111,19 @@ impl Component for Navigation {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             NavigationMsg::ToggleDropdown => {
-                console::log_1(&format!("Drop Down Selected: {}", ctx.props().peer_id.to_string()).into());
                 self.dropdown_open = !self.dropdown_open;
-                true
-            }
-            NavigationMsg::CloseDropdown => {
-                console::log_1(&format!("Drop Down Closed: {}", ctx.props().peer_id.to_string()).into());
-                self.dropdown_open = false;
                 true
             }
             NavigationMsg::CopyPeerIdToClipboard => {
                 let clipboard = web_sys::window().expect("global window does not exist").navigator().clipboard();
-                clipboard.write_text(&ctx.props().peer_id.to_string());
+                let promise = clipboard.write_text(&ctx.props().peer_id.to_string());
+                wasm_bindgen_futures::spawn_local(async move {
+                    let result = wasm_bindgen_futures::JsFuture::from(promise).await;
+                    match result {
+                        Ok(_) => console::log_1(&"Copied peer id to clipboard!".into()),
+                        Err(_) => console::log_1(&"Failed to copy peer id to clipboard!".into()),
+                    }
+                });
                 false
             }
         }
@@ -131,12 +131,6 @@ impl Component for Navigation {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let on_toggle_dropdown = ctx.link().callback(|_| NavigationMsg::ToggleDropdown);
-        // let on_close_dropdown = ctx.link().callback(|_| NavigationMsg::CloseDropdown);
-        // let on_nav_click = ctx.link().callback(|e: MouseEvent| {
-        //     e.stop_propagation();
-        //     NavigationMsg::CloseDropdown
-        // });
-
         let copy_peer_id_to_clipboard = ctx.link().callback(|_| NavigationMsg::CopyPeerIdToClipboard);
 
         // Get first letter of username for avatar

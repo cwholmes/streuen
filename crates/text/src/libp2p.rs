@@ -20,7 +20,7 @@ pub(crate) fn build_swarm() -> Result<Swarm<ChatBehavior>, Box<dyn std::error::E
         request_response::ProtocolSupport::Full,
     )];
 
-    let mut swarm = libp2p::SwarmBuilder::with_existing_identity(id_keys)
+    let swarm = libp2p::SwarmBuilder::with_existing_identity(id_keys)
         .with_wasm_bindgen()
         .with_other_transport(|key| {
             webrtc_websys::Transport::new(webrtc_websys::Config::new(&key))
