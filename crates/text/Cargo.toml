@@ -4,5 +4,30 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-tokio = { workspace = true, features = ["full"] }
-libp2p = { workspace = true, features = [ "noise", "tcp", "tokio", "yamux"] }
+wasm-bindgen = { workspace = true }
+yew = { workspace = true, features = ["csr"] }
+getrandom = { workspace = true, features = ["wasm_js"] }
+serde = { workspace = true, features = ["derive"] }
+
+[dependencies.libp2p]
+workspace = true
+features = [
+    "ed25519",
+    "identify",
+    "ping",
+    "wasm-bindgen",
+    "macros",
+    "kad",
+    "webrtc-websys",
+    "request-response",
+    "cbor",
+]
+
+[dependencies.web-sys]
+workspace = true
+features = [
+    "console",
+    "HtmlFormElement",
+    "HtmlInputElement",
+    "HtmlTextAreaElement",
+]
