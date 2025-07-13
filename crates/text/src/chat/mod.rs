@@ -1,14 +1,18 @@
 mod messages;
-mod window;
-mod users_panel;
 mod navigation;
+mod users_panel;
+mod window;
+
+use std::str::FromStr;
 
 use libp2p::swarm::Swarm;
+use web_sys::console;
 use yew::prelude::*;
 
+use crate::chat::navigation::Navigation;
 use crate::chat::users_panel::UsersPanel;
 use crate::chat::window::ChatWindow;
-use crate::chat::navigation::Navigation;
+use crate::libp2p::behavior::ChatBehavior;
 
 pub enum ChatMsg {
     SelectUser(String),
@@ -17,9 +21,17 @@ pub enum ChatMsg {
 }
 
 pub struct Chat {
-    swarm: Swarm<crate::libp2p::ChatBehavior>,
+    swarm: Swarm<ChatBehavior>,
     users: Vec<String>,
     selected_user: String,
+}
+
+impl Chat {
+    fn parse_and_dial_addr(&mut self, addr: &String) -> Result<(), Box<dyn std::error::Error>> {
+        let multi_addr = libp2p::Multiaddr::from_str(addr)?;
+        let _ = self.swarm.dial(multi_addr)?;
+        Ok(())
+    }
 }
 
 impl Component for Chat {
@@ -42,6 +54,19 @@ impl Component for Chat {
                 true
             }
             ChatMsg::AddUser(user) => {
+                let user_peer_id = libp2p::PeerId::from_str(&user).expect("Invalid Peer id.");
+                let dial_result = self.swarm.dial(user_peer_id);
+                match dial_result {
+                    Ok(()) => web_sys::console::log_1(&"Dial successful!".into()),
+                    Err(err) => web_sys::console::log_1(&format!("Dial error: {}", err).into()),
+                }
+                let dial_relay =
+                    self.parse_and_dial_addr(&"/dns4/auto-relay.libp2p.io/tcp/443/wss".to_string());
+                match dial_relay {
+                    Ok(()) => web_sys::console::log_1(&"Dial relay successful!".into()),
+                    Err(err) => console::log_1(&format!("Dial relay error: {}", err).into()),
+                }
+
                 if !self.users.contains(&user) {
                     self.users.push(user.clone());
                     self.selected_user = user.clone();
@@ -73,12 +98,9 @@ impl Component for Chat {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         // Callbacks for selecting, adding, and removing users
-        let on_select_user =
-            ctx.link().callback(ChatMsg::SelectUser);
-        let on_add_user =
-            ctx.link().callback(ChatMsg::AddUser);
-        let on_remove_user =
-            ctx.link().callback(ChatMsg::RemoveUser);
+        let on_select_user = ctx.link().callback(ChatMsg::SelectUser);
+        let on_add_user = ctx.link().callback(ChatMsg::AddUser);
+        let on_remove_user = ctx.link().callback(ChatMsg::RemoveUser);
         html! {
             <>
                 <div style="display: flex; flex-direction: column; height: 100vh; min-height: 0;">

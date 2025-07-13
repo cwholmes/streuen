@@ -20,8 +20,17 @@ features = [
     "macros",
     "kad",
     "webrtc-websys",
+    "websocket-websys",
     "request-response",
     "cbor",
+    "kad",
+    "dcutr",
+    "gossipsub",
+    "relay",
+    "rendezvous",
+    "noise",
+    "yamux",
+    "tls",
 ]
 
 [dependencies.web-sys]

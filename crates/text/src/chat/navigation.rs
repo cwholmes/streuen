@@ -1,6 +1,6 @@
-use yew::prelude::*;
-use web_sys::console;
 use libp2p::PeerId;
+use web_sys::console;
+use yew::prelude::*;
 
 const NAVIGATION_CSS: &str = r#"
 .decentral-text-navigation {
@@ -115,7 +115,10 @@ impl Component for Navigation {
                 true
             }
             NavigationMsg::CopyPeerIdToClipboard => {
-                let clipboard = web_sys::window().expect("global window does not exist").navigator().clipboard();
+                let clipboard = web_sys::window()
+                    .expect("global window does not exist")
+                    .navigator()
+                    .clipboard();
                 let promise = clipboard.write_text(&ctx.props().peer_id.to_string());
                 wasm_bindgen_futures::spawn_local(async move {
                     let result = wasm_bindgen_futures::JsFuture::from(promise).await;
@@ -131,10 +134,20 @@ impl Component for Navigation {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let on_toggle_dropdown = ctx.link().callback(|_| NavigationMsg::ToggleDropdown);
-        let copy_peer_id_to_clipboard = ctx.link().callback(|_| NavigationMsg::CopyPeerIdToClipboard);
+        let copy_peer_id_to_clipboard = ctx
+            .link()
+            .callback(|_| NavigationMsg::CopyPeerIdToClipboard);
 
         // Get first letter of username for avatar
-        let avatar_letter = ctx.props().peer_id.to_string().chars().next().unwrap_or('U').to_uppercase().to_string();
+        let avatar_letter = ctx
+            .props()
+            .peer_id
+            .to_string()
+            .chars()
+            .next()
+            .unwrap_or('U')
+            .to_uppercase()
+            .to_string();
 
         html! {
             <>
@@ -144,8 +157,8 @@ impl Component for Navigation {
                         { "Decentral Text" }
                     </a>
                     <div class="decentral-text-user-dropdown">
-                        <button 
-                            class="decentral-text-user-button" 
+                        <button
+                            class="decentral-text-user-button"
                             onclick={on_toggle_dropdown}
                         >
                             <div class="decentral-text-user-avatar">
