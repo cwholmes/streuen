@@ -1,0 +1,4 @@
+{
+    // comment out when editing non wasm components
+    "rust-analyzer.cargo.target": "wasm32-unknown-unknown"
+}

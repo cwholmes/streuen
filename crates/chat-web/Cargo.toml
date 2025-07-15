@@ -1,0 +1,76 @@
+[package]
+name = "streuen-chat-web"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+futures = { workspace = true }
+futures-timer = { workspace = true }
+streuen-chat = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.libp2p]
+workspace = true
+features = [
+    "ed25519",
+    "ecdsa",
+    "secp256k1",
+    "identify",
+    "ping",
+    "macros",
+    "kad",
+    "request-response",
+    "cbor",
+    "kad",
+    "dcutr",
+    "gossipsub",
+    "relay",
+    "rendezvous",
+    "noise",
+    "yamux",
+    "tls",
+]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["wasm_js"] }
+tracing-wasm = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+yew = { workspace = true, features = ["csr"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.libp2p]
+workspace = true
+features = [
+    "ed25519",
+    "ecdsa",
+    "secp256k1",
+    "identify",
+    "ping",
+    "wasm-bindgen",
+    "macros",
+    "kad",
+    "webrtc-websys",
+    "websocket-websys",
+    "request-response",
+    "cbor",
+    "kad",
+    "dcutr",
+    "gossipsub",
+    "relay",
+    "rendezvous",
+    "noise",
+    "yamux",
+    "tls",
+]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+workspace = true
+features = [
+    "console",
+    "Clipboard",
+    "HtmlFormElement",
+    "HtmlInputElement",
+    "HtmlTextAreaElement",
+]

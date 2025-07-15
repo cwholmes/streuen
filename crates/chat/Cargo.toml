@@ -1,0 +1,32 @@
+[package]
+name = "streuen-chat"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+futures = { workspace = true }
+
+[dependencies.libp2p]
+workspace = true
+features = [
+    "ed25519",
+    "ecdsa",
+    "secp256k1",
+    "identify",
+    "ping",
+    "macros",
+    "kad",
+    "request-response",
+    "cbor",
+    "kad",
+    "dcutr",
+    "gossipsub",
+    "relay",
+    "rendezvous",
+    "noise",
+    "yamux",
+    "tls",
+]

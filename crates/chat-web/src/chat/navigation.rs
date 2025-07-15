@@ -119,7 +119,7 @@ impl Component for Navigation {
                     .expect("global window does not exist")
                     .navigator()
                     .clipboard();
-                let promise = clipboard.write_text(&ctx.props().peer_id.to_string());
+                let promise = clipboard.write_text(&ctx.props().peer_id.to_base58());
                 wasm_bindgen_futures::spawn_local(async move {
                     let result = wasm_bindgen_futures::JsFuture::from(promise).await;
                     match result {
