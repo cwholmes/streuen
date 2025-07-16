@@ -1,0 +1,12 @@
+[package]
+name = "chat-cli"
+version.workspace = true
+rust-version.workspace = true
+edition.workspace = true
+
+[dependencies]
+crossterm = { workspace = true, features = ["event-stream"] }
+futures = { workspace = true }
+ratatui = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+color-eyre = { workspace = true }
