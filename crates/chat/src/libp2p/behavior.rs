@@ -19,7 +19,10 @@ pub struct ChatBehavior {
 }
 
 impl ChatBehavior {
-    pub fn new(keypair: &identity::Keypair, relay_client: Option<relay::client::Behaviour>) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn new(
+        keypair: &identity::Keypair,
+        relay_client: Option<relay::client::Behaviour>,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let local_peer_id = keypair.public().to_peer_id();
 
         let protocols = [(
@@ -45,11 +48,11 @@ impl ChatBehavior {
         )?;
 
         Ok(Self {
-            request_response: request_response,
+            request_response,
             relay_client: relay_client.into(),
             kad: Some(kad).into(),
-            identify: identify,
-            gossipsub: gossipsub,
+            identify,
+            gossipsub,
         })
     }
 }

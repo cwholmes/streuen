@@ -29,9 +29,7 @@ pub fn build_websys_swarm(keypair: &identity::Keypair) -> Result<(), Box<dyn std
                 .boxed()
         })?
         .with_relay_client(noise::Config::new, yamux::Config::default)?
-        .with_behaviour(|keypair, relay| {
-            ChatBehavior::new(keypair, Some(relay))
-        })?
+        .with_behaviour(|keypair, relay| ChatBehavior::new(keypair, Some(relay)))?
         .with_swarm_config(|config| config)
         .build();
 

@@ -6,8 +6,8 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
 futures = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dependencies.libp2p]
 workspace = true

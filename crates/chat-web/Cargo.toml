@@ -6,9 +6,9 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
 futures = { workspace = true }
 futures-timer = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 streuen-chat = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.libp2p]
