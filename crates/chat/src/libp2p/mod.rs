@@ -7,6 +7,7 @@ use libp2p::{
     request_response, swarm::SwarmEvent, yamux,
 };
 
+use crate::app;
 use crate::libp2p::behaviour::ChatBehaviourEvent;
 
 mod behaviour;
@@ -27,18 +28,24 @@ pub enum ChatMsgReceive {
 
 pub struct SwarmStart {
     keypair: Keypair,
+    app_sender: mpsc::Sender<app::AppEvent>,
+    swarm_receiver: mpsc::Receiver<app::SwarmEvent>,
 }
 
 impl SwarmStart {
-    pub fn new(keypair: Keypair) -> Self {
-        Self { keypair }
+    pub fn new(
+        keypair: Keypair,
+        app_sender: mpsc::Sender<app::AppEvent>,
+        swarm_receiver: mpsc::Receiver<app::SwarmEvent>,
+    ) -> Self {
+        Self {
+            keypair,
+            app_sender,
+            swarm_receiver,
+        }
     }
 
-    async fn run_swarm(
-        mut swarm: Swarm<behaviour::ChatBehaviour>,
-        _app_sender: mpsc::Sender<ChatMsgReceive>,
-        mut swarm_receiver: mpsc::Receiver<ChatMsgSend>,
-    ) {
+    async fn run_swarm(&self, mut swarm: Swarm<behaviour::ChatBehaviour>) {
         use libp2p::futures::StreamExt;
 
         let bootstrap_interval = Duration::from_secs(5 * 60);
@@ -124,23 +131,15 @@ impl SwarmStart {
             .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))?
             .build();
 
-        let (swarm_sender, swarm_receiver) = mpsc::channel(16);
-        let (app_sender, app_receiver) = mpsc::channel(16);
+        wasm_bindgen_futures::spawn_local(self.run_swarm(swarm));
 
-        wasm_bindgen_futures::spawn_local(SwarmStart::run_swarm(swarm, app_sender, swarm_receiver));
-
-        Ok((swarm_sender, app_receiver))
+        Ok(())
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 impl SwarmStart {
-    pub fn start_swarm(
-        &self,
-    ) -> Result<
-        (mpsc::Sender<ChatMsgSend>, mpsc::Receiver<ChatMsgReceive>),
-        Box<dyn std::error::Error + Sync + Send>,
-    > {
+    pub fn start_swarm(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
         let swarm = SwarmBuilder::with_existing_identity(self.keypair.clone())
             .with_tokio()
             .with_tcp(
@@ -153,11 +152,8 @@ impl SwarmStart {
             .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))?
             .build();
 
-        let (swarm_sender, swarm_receiver) = mpsc::channel(16);
-        let (app_sender, app_receiver) = mpsc::channel(16);
+        tokio::spawn(self.run_swarm(swarm));
 
-        tokio::spawn(SwarmStart::run_swarm(swarm, app_sender, swarm_receiver));
-
-        Ok((swarm_sender, app_receiver))
+        Ok(())
     }
 }
