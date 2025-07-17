@@ -7,9 +7,15 @@ edition.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 futures = { workspace = true }
+futures-channel = { workspace = true }
+futures-timer = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+tracing = { workspace = true }
 
-[dependencies.libp2p]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true, features = ["full"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.libp2p]
 workspace = true
 features = [
     "ed25519",
@@ -17,6 +23,7 @@ features = [
     "secp256k1",
     "identify",
     "ping",
+    "wasm-bindgen",
     "macros",
     "kad",
     "request-response",
@@ -29,4 +36,38 @@ features = [
     "noise",
     "yamux",
     "tls",
+    "tokio",
+    "tcp",
+    "quic",
+    "dns",
+]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["wasm_js"] }
+tracing-wasm = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.libp2p]
+workspace = true
+features = [
+    "ed25519",
+    "ecdsa",
+    "secp256k1",
+    "identify",
+    "ping",
+    "wasm-bindgen",
+    "macros",
+    "kad",
+    "webrtc-websys",
+    "websocket-websys",
+    "request-response",
+    "cbor",
+    "kad",
+    "dcutr",
+    "gossipsub",
+    "relay",
+    "rendezvous",
+    "noise",
+    "yamux",
 ]

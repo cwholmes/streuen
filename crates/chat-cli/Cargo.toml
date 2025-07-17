@@ -1,12 +1,13 @@
 [package]
-name = "chat-cli"
+name = "streuen-chat-cli"
 version.workspace = true
 rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
+color-eyre = { workspace = true }
 crossterm = { workspace = true, features = ["event-stream"] }
 futures = { workspace = true }
 ratatui = { workspace = true }
+streuen-chat = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-color-eyre = { workspace = true }

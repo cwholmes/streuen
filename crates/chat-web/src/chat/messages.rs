@@ -16,7 +16,7 @@ pub struct ChatMessagesProps {
 #[function_component(ChatMessages)]
 pub fn chat_messages(props: &ChatMessagesProps) -> Html {
     html! {
-        <div class="decentral-text-messages">
+        <div class="streuen-messages">
             {
                 props.messages.iter().enumerate().map(|(i, msg)| {
                     let is_me = msg.sender == props.current_user;
@@ -26,13 +26,13 @@ pub fn chat_messages(props: &ChatMessagesProps) -> Html {
                         false
                     };
                     html! {
-                        <div class={classes!("decentral-text-message-row", if is_me { Some("me") } else { None })}>
+                        <div class={classes!("streuen-message-row", if is_me { Some("me") } else { None })}>
                             { if show_sender {
-                                html! { <span class="decentral-text-message-sender">{ &msg.sender }</span> }
+                                html! { <span class="streuen-message-sender">{ &msg.sender }</span> }
                             } else {
                                 html! {}
                             }}
-                            <div class="decentral-text-message-bubble">{ &msg.text }</div>
+                            <div class="streuen-message-bubble">{ &msg.text }</div>
                         </div>
                     }
                 }).collect::<Html>()
