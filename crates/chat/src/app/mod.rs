@@ -1,80 +1,81 @@
-mod error;
+pub(crate) mod error;
 mod messages;
 mod users;
 
-use futures::StreamExt;
+use std::task::{Context, Poll};
+
 use futures_channel::mpsc;
 
-pub struct ChatApp {
+pub struct ChatApp<'a, H: AppHandler> {
     users: users::Users,
     messages: messages::Messages,
 
-    app_sender: mpsc::Sender<AppEvent>,
-    app_receiver: mpsc::Receiver<AppEvent>,
+    app_handlers: Vec<&'a H>,
 
-    swarm_sender: mpsc::Sender<SwarmEvent>,
-    swarm_receiver: mpsc::Receiver<SwarmEvent>,
+    swarm_sender: Option<mpsc::Sender<SwarmEvent>>,
 }
 
-impl ChatApp {
+impl<'a, H: AppHandler> ChatApp<'a, H> {
     pub fn new(name: String) -> Result<Self, error::ChatAppError> {
         let current_user = users::User::new(name);
-        let (app_sender, app_receiver) = mpsc::channel(16);
-        let (swarm_sender, swarm_receiver) = mpsc::channel(16);
 
         Ok(Self {
             users: users::Users::new(current_user),
             messages: messages::Messages::new(),
 
-            app_sender,
-            app_receiver,
+            app_handlers: Vec::new(),
 
-            swarm_sender,
-            swarm_receiver,
+            swarm_sender: None,
         })
     }
 
+    pub fn current_user(&self) -> users::User {
+        self.users.current_user()
+    }
+
     pub fn start_swarm(&self) -> Result<(), error::ChatAppError> {
-        let swarm_start = crate::libp2p::SwarmStart::new(
-            self.users.current_user().keypair(),
-            self.app_sender.clone(),
-            self.swarm_receiver.clone(),
-        );
+        // let swarm_start = crate::libp2p::SwarmStart::new(
+        //     self.users.current_user().keypair(),
+        //     self.app_sender.clone(),
+        //     self.swarm_receiver.clone(),
+        // );
 
-        swarm_start.start_swarm()?;
-    }
-
-    pub fn send_app_event(&mut self, event: AppEvent) -> Result<(), error::ChatAppError> {
-        self.app_sender.try_send(event)?;
+        // swarm_start.start_swarm()?;
 
         Ok(())
     }
 
-    pub async fn next_app_event(&mut self) -> Option<AppEvent> {
-        self.app_receiver.next().await
-    }
+    // pub fn send_app_event(&mut self, event: AppEvent) -> Result<(), error::ChatAppError> {
+    //     self.app_sender.try_send(event)?;
 
-    pub fn send_swarm_event(&mut self, event: SwarmEvent) -> Result<(), error::ChatAppError> {
-        self.swarm_sender.try_send(event)?;
+    //     Ok(())
+    // }
 
-        Ok(())
-    }
+    // pub async fn next_app_event(&mut self) -> Option<AppEvent> {
+    //     self.app_receiver.next().await
+    // }
 
-    pub async fn next_swarm_event(&mut self) -> Option<SwarmEvent> {
-        self.swarm_receiver.next().await
+    // pub fn send_swarm_event(&mut self, event: SwarmEvent) -> Result<(), error::ChatAppError> {
+    //     self.swarm_sender.try_send(event)?;
+
+    //     Ok(())
+    // }
+
+    // pub async fn next_swarm_event(&mut self) -> Option<SwarmEvent> {
+    //     self.swarm_receiver.next().await
+    // }
+
+    pub fn register_app_handler(&mut self, handler: H) {
+        self.app_handlers.push(Box::new(handler));
     }
 }
 
-struct AppSender {
-    app_sender: mpsc::Sender<AppEvent>,
-}
+pub trait AppHandler {
+    fn handle(&mut self, event: &AppEvent);
 
-impl AppSender {
-    pub fn send(&mut self, event: AppEvent) -> Result<(), error::ChatAppError> {
-        self.app_sender.try_send(event)?;
-
-        Ok(())
-    }
+    // fn poll(&mut self, _cx: &mut Context<'_>) -> Poll<SwarmEvent> {
+    //     Poll::Pending
+    // }
 }
 
 struct SwarmSender {

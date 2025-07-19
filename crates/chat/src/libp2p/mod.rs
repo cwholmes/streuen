@@ -1,3 +1,5 @@
+#[cfg(target_arch = "wasm32")]
+use core::error;
 use std::task::Poll;
 use std::time::Duration;
 
@@ -26,26 +28,27 @@ pub enum ChatMsgReceive {
     None,
 }
 
-pub struct SwarmStart {
-    keypair: Keypair,
-    app_sender: mpsc::Sender<app::AppEvent>,
+struct SwarmRunner<'a, H> {
+    chat_app: &'a app::ChatApp<'a, H>,
+    swarm_sender: mpsc::Sender<app::SwarmEvent>,
     swarm_receiver: mpsc::Receiver<app::SwarmEvent>,
 }
 
-impl SwarmStart {
-    pub fn new(
-        keypair: Keypair,
-        app_sender: mpsc::Sender<app::AppEvent>,
-        swarm_receiver: mpsc::Receiver<app::SwarmEvent>,
-    ) -> Self {
+impl<'a, H> SwarmRunner<'a, H> {
+    pub fn new(keypair: Keypair, chat_app: &'a app::ChatApp<'a, H>) -> Self {
+        let (swarm_sender, swarm_receiver) = mpsc::channel(16);
+
         Self {
-            keypair,
-            app_sender,
+            chat_app,
+            swarm_sender,
             swarm_receiver,
         }
     }
 
-    async fn run_swarm(&self, mut swarm: Swarm<behaviour::ChatBehaviour>) {
+    async fn run_swarm(
+        mut swarm: Swarm<behaviour::ChatBehaviour>,
+        chat_app: app::ChatApp,
+    ) -> mpsc::Sender<app::SwarmEvent> {
         use libp2p::futures::StreamExt;
 
         let bootstrap_interval = Duration::from_secs(5 * 60);
@@ -104,18 +107,13 @@ impl SwarmStart {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl SwarmStart {
-    pub fn start_swarm(
-        &self,
-    ) -> Result<
-        (mpsc::Sender<ChatMsgSend>, mpsc::Receiver<ChatMsgReceive>),
-        Box<dyn std::error::Error + Sync + Send>,
-    > {
+impl<'a, H> SwarmRunner<'a, H> {
+    fn build_swarm(&self) -> Result<Swarm<behaviour::ChatBehaviour>, app::error::ChatAppError> {
         use libp2p::Transport;
         use libp2p::webrtc_websys;
         use libp2p::websocket_websys;
 
-        let swarm = SwarmBuilder::with_existing_identity(self.keypair.clone())
+        SwarmBuilder::with_existing_identity(self.keypair.clone())
             .with_wasm_bindgen()
             .with_other_transport(|key| {
                 webrtc_websys::Transport::new(webrtc_websys::Config::new(&key))
@@ -129,18 +127,14 @@ impl SwarmStart {
             })?
             .with_relay_client(noise::Config::new, yamux::Config::default)?
             .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))?
-            .build();
-
-        wasm_bindgen_futures::spawn_local(self.run_swarm(swarm));
-
-        Ok(())
+            .build()
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 impl SwarmStart {
-    pub fn start_swarm(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>> {
-        let swarm = SwarmBuilder::with_existing_identity(self.keypair.clone())
+    fn build_swarm(&self) -> Result<Swarm<behaviour::ChatBehaviour>, app::error::ChatAppError> {
+        SwarmBuilder::with_existing_identity(self.keypair.clone())
             .with_tokio()
             .with_tcp(
                 libp2p::tcp::Config::new(),
@@ -150,10 +144,6 @@ impl SwarmStart {
             .with_quic()
             .with_relay_client(noise::Config::new, yamux::Config::default)?
             .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))?
-            .build();
-
-        tokio::spawn(self.run_swarm(swarm));
-
-        Ok(())
+            .build()
     }
 }
