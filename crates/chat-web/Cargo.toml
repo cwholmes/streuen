@@ -14,7 +14,6 @@ futures-timer = { workspace = true }
 getrandom = { workspace = true, features = ["wasm_js"] }
 serde = { workspace = true, features = ["derive"] }
 streuen-chat = { workspace = true }
-tokio = { workspace = true, features = ["rt"] }
 tracing = { workspace = true }
 tracing-wasm = { workspace = true }
 wasm-bindgen = { workspace = true }

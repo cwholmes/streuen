@@ -15,6 +15,20 @@ a shim.
 asdf reshim rust
 ```
 
+## Run Build
+
+Run to enable to wasm target.
+
+```sh
+rustup target add wasm32-unknown-unknown
+```
+
+Run the build.
+
+```sh
+RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --bin streuen-chat-web
+```
+
 ## Run Dev
 
 ```sh

@@ -1,34 +1,11 @@
-use std::fmt;
-
-use futures_channel::mpsc;
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ChatAppError {
-    ChatError,
-    ChannelClosed,
-    SenderError(futures_channel::mpsc::SendError),
-}
-
-impl std::error::Error for ChatAppError {}
-
-impl fmt::Display for ChatAppError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ChatAppError::ChatError => {
-                write!(f, "ChatError")
-            }
-            ChatAppError::ChannelClosed => {
-                write!(f, "ChannelClosed")
-            }
-            ChatAppError::SenderError(err) => {
-                write!(f, "SenderError({err})")
-            }
-        }
-    }
-}
-
-impl<T> From<mpsc::TrySendError<T>> for ChatAppError {
-    fn from(err: mpsc::TrySendError<T>) -> Self {
-        ChatAppError::SenderError(err.into_send_error())
-    }
+    #[error(transparent)]
+    NoiseError(#[from] libp2p::noise::Error),
+    #[error(transparent)]
+    BehaviorError(#[from] libp2p::BehaviourBuilderError),
+    #[error(transparent)]
+    SenderError(#[from] futures_channel::mpsc::SendError),
+    #[error("Missing swarm sender.")]
+    MissingSender,
 }

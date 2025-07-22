@@ -1,5 +1,5 @@
-mod app;
-pub mod libp2p;
+pub mod app;
+mod libp2p;
 mod swarm;
 
 pub use app::ChatApp;

@@ -1,68 +1,49 @@
-#[cfg(target_arch = "wasm32")]
-use core::error;
-use std::task::Poll;
-use std::time::Duration;
+mod behaviour;
+
+use std::collections::VecDeque;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use futures_channel::mpsc;
 use libp2p::{
-    Multiaddr, PeerId, StreamProtocol, Swarm, SwarmBuilder, identity::Keypair, multiaddr, noise,
+    StreamProtocol, Swarm, SwarmBuilder, multiaddr, noise,
     request_response, swarm::SwarmEvent, yamux,
 };
 
 use crate::app;
 use crate::libp2p::behaviour::ChatBehaviourEvent;
 
-mod behaviour;
-
 const CHAT_PROTOCOL: StreamProtocol = StreamProtocol::new("/streuen/chat/0.1.0");
 
-#[derive(Debug, Clone)]
-pub enum ChatMsgSend {
-    AddBoostrapPeer(Multiaddr),
-    Connect(PeerId),
-    SendMessage(PeerId, String),
+pub(crate) struct SwarmRunner<'a> {
+    chat_app: &'a app::ChatApp,
 }
 
-#[derive(Debug, Clone)]
-pub enum ChatMsgReceive {
-    None,
-}
-
-struct SwarmRunner<'a, H> {
-    chat_app: &'a app::ChatApp<'a, H>,
-    swarm_sender: mpsc::Sender<app::SwarmEvent>,
-    swarm_receiver: mpsc::Receiver<app::SwarmEvent>,
-}
-
-impl<'a, H> SwarmRunner<'a, H> {
-    pub fn new(keypair: Keypair, chat_app: &'a app::ChatApp<'a, H>) -> Self {
-        let (swarm_sender, swarm_receiver) = mpsc::channel(16);
-
-        Self {
-            chat_app,
-            swarm_sender,
-            swarm_receiver,
-        }
+impl<'a> SwarmRunner<'a> {
+    pub fn new(chat_app: &'a app::ChatApp) -> Self {
+        Self { chat_app }
     }
 
-    async fn run_swarm(
+    pub(crate) fn run_swarm(&mut self, swarm_queue: Rc<RefCell<VecDeque<app::SwarmEvent>>>) -> Result<(), app::error::ChatAppError> {
+        let swarm = self.build_swarm()?;
+
+        let swarm_loop = SwarmRunner::run_swarm_loop(swarm_queue, swarm);
+
+        SwarmRunner::spawn_swarm_loop(swarm_loop);
+
+        Ok(())
+    }
+
+    async fn run_swarm_loop(
+        swarm_queue: Rc<RefCell<VecDeque<app::SwarmEvent>>>,
         mut swarm: Swarm<behaviour::ChatBehaviour>,
-        chat_app: app::ChatApp,
-    ) -> mpsc::Sender<app::SwarmEvent> {
+    ) {
         use libp2p::futures::StreamExt;
 
-        let bootstrap_interval = Duration::from_secs(5 * 60);
-        let mut bootstrap_timer = futures_timer::Delay::new(bootstrap_interval);
-
         loop {
-            if let Poll::Ready(()) = futures::poll!(&mut bootstrap_timer) {
-                bootstrap_timer.reset(bootstrap_interval);
-                let _ = swarm.behaviour_mut().kad.as_mut().map(|k| k.bootstrap());
-            }
-
-            if let Some(event) = swarm_receiver.next().await {
+            if let Some(event) = swarm_queue.borrow_mut().pop_front() {
                 match event {
-                    ChatMsgSend::AddBoostrapPeer(addr) => {
+                    app::SwarmEvent::AddBoostrapPeer(addr) => {
                         if let Some(multiaddr::Protocol::P2p(peer_id)) = addr.iter().last() {
                             swarm.behaviour_mut().kad.as_mut().map(|k| {
                                 let _ = k.add_address(&peer_id, addr);
@@ -70,11 +51,11 @@ impl<'a, H> SwarmRunner<'a, H> {
                             });
                         }
                     }
-                    ChatMsgSend::Connect(peer_id) => match swarm.dial(peer_id) {
+                    app::SwarmEvent::Connect(peer_id) => match swarm.dial(peer_id) {
                         Ok(_) => tracing::debug!("Connection to peer successful: {peer_id}"),
                         Err(err) => tracing::debug!("Connection to peer failed: {err:?}"),
                     },
-                    ChatMsgSend::SendMessage(peer_id, message) => {
+                    app::SwarmEvent::SendMessage(peer_id, message) => {
                         let request = behaviour::ChatSendMessage {
                             message_id: 1,
                             message,
@@ -107,34 +88,44 @@ impl<'a, H> SwarmRunner<'a, H> {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl<'a, H> SwarmRunner<'a, H> {
+impl<'a> SwarmRunner<'a> {
+
     fn build_swarm(&self) -> Result<Swarm<behaviour::ChatBehaviour>, app::error::ChatAppError> {
         use libp2p::Transport;
         use libp2p::webrtc_websys;
         use libp2p::websocket_websys;
 
-        SwarmBuilder::with_existing_identity(self.keypair.clone())
+        let builder = SwarmBuilder::with_existing_identity(self.chat_app.keypair())
             .with_wasm_bindgen()
             .with_other_transport(|key| {
                 webrtc_websys::Transport::new(webrtc_websys::Config::new(&key))
-            })?
+            })
+            .unwrap() // this is Infallible so this is safe
             .with_other_transport(|key| {
                 websocket_websys::Transport::default()
                     .upgrade(libp2p::core::upgrade::Version::V1)
                     .authenticate(noise::Config::new(&key).unwrap())
                     .multiplex(yamux::Config::default())
                     .boxed()
-            })?
+            })
+            .unwrap() // this is Infallible so this is safe
             .with_relay_client(noise::Config::new, yamux::Config::default)?
-            .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))?
-            .build()
+            .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))
+            .unwrap(); // this is Infallible so this is safe
+
+        Ok(builder.build())
+    }
+
+    fn spawn_swarm_loop<F: Future<Output = ()> + 'static>(future: F) {
+        wasm_bindgen_futures::spawn_local(future);
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl SwarmStart {
+impl<'a> SwarmRunner<'a> {
+
     fn build_swarm(&self) -> Result<Swarm<behaviour::ChatBehaviour>, app::error::ChatAppError> {
-        SwarmBuilder::with_existing_identity(self.keypair.clone())
+        let builder = SwarmBuilder::with_existing_identity(self.chat_app.keypair())
             .with_tokio()
             .with_tcp(
                 libp2p::tcp::Config::new(),
@@ -143,7 +134,13 @@ impl SwarmStart {
             )?
             .with_quic()
             .with_relay_client(noise::Config::new, yamux::Config::default)?
-            .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))?
-            .build()
+            .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))
+            .unwrap(); // this is Infallible so this is safe
+
+        Ok(builder.build())
+    }
+
+    fn spawn_swarm_loop<F: Future<Output = ()> + 'static>(future: F) {
+        ()
     }
 }

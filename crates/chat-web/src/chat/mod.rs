@@ -4,9 +4,7 @@ mod settings_menu;
 mod users_panel;
 mod window;
 
-use futures::{SinkExt, StreamExt};
-use futures_channel::mpsc;
-use streuen_chat::libp2p::{ChatMsgReceive, ChatMsgSend};
+use streuen_chat::app;
 use yew::prelude::*;
 
 use crate::chat::navigation::Navigation;
@@ -21,51 +19,37 @@ pub enum ChatMsg {
     AddUser(String),
     RemoveUser(String),
     ToggleSettings,
-    Receive(ChatMsgReceive),
+    Receive(app::AppEvent),
+}
+
+#[derive(Properties, PartialEq)]
+pub struct ChatProps {
+    pub peer_id: libp2p::PeerId,
+    pub swarm_dispatch_cb: Callback<app::SwarmEvent>,
+    pub register_app_cb: Callback<app::AppCallback>,
 }
 
 pub struct Chat {
-    id_keys: libp2p::identity::Keypair,
     users: Vec<String>,
     selected_user: String,
     settings_open: bool,
-    swarm_sender: mpsc::Sender<ChatMsgSend>,
 }
 
 impl Component for Chat {
     type Message = ChatMsg;
-    type Properties = ();
+    type Properties = ChatProps;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let keypair = libp2p::identity::Keypair::generate_ed25519();
-
-        tracing::debug!("local_id = {}", keypair.public().to_peer_id().to_base58());
-
-        let (swarm_sender, mut app_reciever) =
-            streuen_chat::libp2p::SwarmStart::new(keypair.clone())
-                .start_swarm()
-                .unwrap();
-
-        let on_receive_msg = ctx.link().callback(ChatMsg::Receive);
-
-        wasm_bindgen_futures::spawn_local(async move {
-            loop {
-                if let Some(msg) = app_reciever.next().await {
-                    on_receive_msg.emit(msg);
-                }
-            }
-        });
-
+        let receive_app_event_cb = ctx.link().callback(ChatMsg::Receive);
+        ctx.props().register_app_cb.emit(app::AppCallback::from(move |event| receive_app_event_cb.emit(event)));
         Self {
-            id_keys: keypair,
             users: vec!["me".to_string(), "alice".to_string()],
             selected_user: "me".to_string(),
             settings_open: false,
-            swarm_sender,
         }
     }
 
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             ChatMsg::SelectUser(user) => {
                 self.selected_user = user.clone();
@@ -105,24 +89,12 @@ impl Component for Chat {
             }
             ChatMsg::Bootstrap(addr) => {
                 tracing::debug!("Boostrap: {addr}");
-                let mut swarm_sender = self.swarm_sender.clone();
-                wasm_bindgen_futures::spawn_local(async move {
-                    swarm_sender
-                        .send(ChatMsgSend::AddBoostrapPeer(addr))
-                        .await
-                        .unwrap()
-                });
+                ctx.props().swarm_dispatch_cb.emit(app::SwarmEvent::AddBoostrapPeer(addr));
                 false
             }
             ChatMsg::Connect(peer_id) => {
                 tracing::debug!("Connect: {peer_id}");
-                let mut swarm_sender = self.swarm_sender.clone();
-                wasm_bindgen_futures::spawn_local(async move {
-                    swarm_sender
-                        .send(ChatMsgSend::Connect(peer_id))
-                        .await
-                        .unwrap()
-                });
+                ctx.props().swarm_dispatch_cb.emit(app::SwarmEvent::Connect(peer_id));
                 false
             }
             ChatMsg::Receive(msg) => {
@@ -140,6 +112,7 @@ impl Component for Chat {
         let on_toggle_settings = ctx.link().callback(|_| ChatMsg::ToggleSettings);
         let on_boostrap = ctx.link().callback(ChatMsg::Bootstrap);
         let on_connect = ctx.link().callback(ChatMsg::Connect);
+        
         html! {
             <>
                 <div style="display: flex; flex-direction: column; height: 100vh; min-height: 0;">
@@ -159,7 +132,7 @@ impl Component for Chat {
                                 if self.settings_open {
                                     html! {
                                         <SettingsMenu
-                                            peer_id={self.id_keys.public().to_peer_id().clone()}
+                                            peer_id={ ctx.props().peer_id }
                                             on_close={on_toggle_settings.clone()}
                                             bootstrap={on_boostrap}
                                             connect={on_connect}

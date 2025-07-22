@@ -18,6 +18,7 @@ pub struct SettingsMenuProps {
     pub bootstrap: Callback<libp2p::Multiaddr>,
     pub connect: Callback<PeerId>,
 }
+
 pub struct SettingsMenu {
     connect_string: String,
 }
