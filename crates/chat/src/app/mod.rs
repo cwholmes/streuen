@@ -2,12 +2,12 @@ pub(crate) mod error;
 mod messages;
 mod users;
 
-use std::collections::VecDeque;
 use std::rc::Rc;
-use std::cell::RefCell;
 
-use futures_channel::mpsc;
-use libp2p::{identity::Keypair, Multiaddr, PeerId};
+use futures::channel::mpsc;
+use libp2p::{Multiaddr, PeerId, identity::Keypair};
+
+pub use crate::libp2p::behaviour::{InnerChatBehavior, ToChat};
 
 pub struct ChatApp {
     users: users::Users,
@@ -15,23 +15,25 @@ pub struct ChatApp {
 
     app_callbacks: Vec<AppCallback>,
 
-    swarm_queue: Rc<RefCell<VecDeque<SwarmEvent>>>,
+    chat_behavior: InnerChatBehavior,
 }
 
 impl ChatApp {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String) -> Result<Self, error::ChatAppError> {
         let keypair = Keypair::generate_ed25519();
         let current_user = users::User::new(name, keypair.public().to_peer_id().clone());
-        let users = users::Users::new(current_user, keypair);
+        let users = users::Users::new(current_user, keypair.clone());
 
-        Self {
+        let chat_behavior = crate::libp2p::run_swarm(keypair.clone())?;
+
+        Ok(Self {
             users,
             messages: messages::Messages::new(),
 
             app_callbacks: Vec::new(),
 
-            swarm_queue: Default::default(),
-        }
+            chat_behavior,
+        })
     }
 
     pub(crate) fn keypair(&self) -> Keypair {
@@ -42,24 +44,8 @@ impl ChatApp {
         self.users.current_user().as_ref().clone()
     }
 
-    pub fn connect_to_peer(&mut self, peer_id: PeerId) {
-        self.swarm_queue.borrow_mut().push_back(SwarmEvent::Connect(peer_id));
-    }
-
-    pub fn start(&mut self) -> Result<(), error::ChatAppError> {
-        let mut swarm_runner = crate::libp2p::SwarmRunner::new(self);
-
-        swarm_runner.run_swarm(self.swarm_queue.clone())?;
-
-        Ok(())
-    }
-
-    pub fn swarm_dispatch(&mut self, event: SwarmEvent) {
-        self.swarm_queue.borrow_mut().push_back(event);
-    }
-
-    pub fn dispatcher(&self) -> SwarmDispatcher {
-        SwarmDispatcher { swarm_queue: self.swarm_queue.clone() }
+    pub fn chat_dispatch(&mut self, event: ToChat) {
+        self.chat_behavior.send(event);
     }
 
     pub fn register_app_handler(&mut self, cb: AppCallback) {
@@ -68,16 +54,16 @@ impl ChatApp {
 }
 
 pub struct AppCallback {
-    cb: Rc<dyn Fn(AppEvent) -> ()>,
+    cb: Rc<dyn Fn(ToApp) -> ()>,
 }
 
 impl AppCallback {
-    pub fn emit(&self, event: AppEvent) {
+    pub fn emit(&self, event: ToApp) {
         (*self.cb)(event)
     }
 }
 
-impl<F: Fn(AppEvent) -> () + 'static> From<F> for AppCallback {
+impl<F: Fn(ToApp) -> () + 'static> From<F> for AppCallback {
     fn from(func: F) -> Self {
         Self { cb: Rc::new(func) }
     }
@@ -85,28 +71,13 @@ impl<F: Fn(AppEvent) -> () + 'static> From<F> for AppCallback {
 
 impl Clone for AppCallback {
     fn clone(&self) -> Self {
-        Self { cb: self.cb.clone() }
+        Self {
+            cb: self.cb.clone(),
+        }
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum AppEvent {
+pub enum ToApp {
     X,
-}
-
-pub struct SwarmDispatcher {
-    swarm_queue: Rc<RefCell<VecDeque<SwarmEvent>>>,
-}
-
-impl SwarmDispatcher {
-    pub fn dispatch(&mut self, event: SwarmEvent) {
-        self.swarm_queue.borrow_mut().push_back(event);
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum SwarmEvent {
-    AddBoostrapPeer(Multiaddr),
-    Connect(PeerId),
-    SendMessage(PeerId, String),
 }

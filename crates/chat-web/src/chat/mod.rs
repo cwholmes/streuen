@@ -19,13 +19,13 @@ pub enum ChatMsg {
     AddUser(String),
     RemoveUser(String),
     ToggleSettings,
-    Receive(app::AppEvent),
+    Receive(app::ToApp),
 }
 
 #[derive(Properties, PartialEq)]
 pub struct ChatProps {
     pub peer_id: libp2p::PeerId,
-    pub swarm_dispatch_cb: Callback<app::SwarmEvent>,
+    pub swarm_dispatch_cb: Callback<app::ToChat>,
     pub register_app_cb: Callback<app::AppCallback>,
 }
 
@@ -41,7 +41,11 @@ impl Component for Chat {
 
     fn create(ctx: &Context<Self>) -> Self {
         let receive_app_event_cb = ctx.link().callback(ChatMsg::Receive);
-        ctx.props().register_app_cb.emit(app::AppCallback::from(move |event| receive_app_event_cb.emit(event)));
+        ctx.props()
+            .register_app_cb
+            .emit(app::AppCallback::from(move |event| {
+                receive_app_event_cb.emit(event)
+            }));
         Self {
             users: vec!["me".to_string(), "alice".to_string()],
             selected_user: "me".to_string(),
@@ -89,12 +93,16 @@ impl Component for Chat {
             }
             ChatMsg::Bootstrap(addr) => {
                 tracing::debug!("Boostrap: {addr}");
-                ctx.props().swarm_dispatch_cb.emit(app::SwarmEvent::AddBoostrapPeer(addr));
+                ctx.props()
+                    .swarm_dispatch_cb
+                    .emit(app::ToChat::AddBoostrapPeer(addr));
                 false
             }
             ChatMsg::Connect(peer_id) => {
                 tracing::debug!("Connect: {peer_id}");
-                ctx.props().swarm_dispatch_cb.emit(app::SwarmEvent::Connect(peer_id));
+                ctx.props()
+                    .swarm_dispatch_cb
+                    .emit(app::ToChat::Connect(peer_id));
                 false
             }
             ChatMsg::Receive(msg) => {
@@ -112,7 +120,7 @@ impl Component for Chat {
         let on_toggle_settings = ctx.link().callback(|_| ChatMsg::ToggleSettings);
         let on_boostrap = ctx.link().callback(ChatMsg::Bootstrap);
         let on_connect = ctx.link().callback(ChatMsg::Connect);
-        
+
         html! {
             <>
                 <div style="display: flex; flex-direction: column; height: 100vh; min-height: 0;">

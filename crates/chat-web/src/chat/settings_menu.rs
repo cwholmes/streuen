@@ -66,7 +66,8 @@ impl Component for SettingsMenu {
                 if let Ok(peer_id) = libp2p::PeerId::from_str(&self.connect_string) {
                     ctx.props().connect.emit(peer_id);
                 }
-                false
+                self.connect_string = String::new();
+                true
             }
         }
     }

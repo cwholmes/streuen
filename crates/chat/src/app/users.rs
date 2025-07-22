@@ -1,8 +1,6 @@
 use std::rc::Rc;
 
-use libp2p::bytes::BufMut;
-use libp2p::PeerId;
-use libp2p::identity::Keypair;
+use libp2p::{PeerId, identity::Keypair};
 
 #[derive(Clone, Debug)]
 pub struct CurrentUser {

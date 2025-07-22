@@ -6,9 +6,9 @@ use crate::chat::Chat;
 
 pub enum AppMsg {
     RegisterAppHandler(app::AppCallback),
-    SwarmDispatchEvent(app::SwarmEvent),
+    SwarmDispatchEvent(app::ToChat),
     ChangeUserName(String),
-    Receive(app::AppEvent),
+    Receive(app::ToApp),
 }
 
 pub struct App {
@@ -20,11 +20,12 @@ impl<'a> Component for App {
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        let mut chat_app = ChatApp::new("Me".to_string());
+        let mut chat_app = ChatApp::new("Me".to_string()).unwrap();
 
-        chat_app.start().unwrap();
-
-        tracing::debug!("local_id = {}", chat_app.current_user().peer_id().to_base58());
+        tracing::debug!(
+            "local_id = {}",
+            chat_app.current_user().peer_id().to_base58()
+        );
 
         Self { chat_app }
     }
@@ -36,12 +37,10 @@ impl<'a> Component for App {
                 false
             }
             AppMsg::SwarmDispatchEvent(event) => {
-                self.chat_app.swarm_dispatch(event);
+                self.chat_app.chat_dispatch(event);
                 false
             }
-            AppMsg::ChangeUserName(_user_name) => {
-                true
-            }
+            AppMsg::ChangeUserName(_user_name) => true,
             AppMsg::Receive(msg) => {
                 tracing::debug!("Received message in chat app: {msg:?}");
                 false
