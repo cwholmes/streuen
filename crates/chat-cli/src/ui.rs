@@ -1,20 +1,81 @@
+use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Widget},
+    widgets::Widget,
 };
 
-use crate::app::App;
+use crate::event::{AppEvent, EventHandler};
 
-impl Widget for &App {
-    /// Renders the user interface widgets.
-    ///
-    // This is where you add new widgets.
-    // See the following resources:
-    // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
-    // - https://github.com/ratatui/ratatui/tree/master/examples
+mod chats;
+mod home;
+mod nav;
+
+#[derive(Debug)]
+pub enum NavSection {
+    Home(home::Home),
+    Chats(chats::Chats),
+    Settings,
+    Help,
+}
+
+impl Default for NavSection {
+    fn default() -> Self {
+        Self::Home(Default::default())
+    }
+}
+
+impl NavSection {
+    pub fn index(&self) -> usize {
+        match self {
+            NavSection::Home(_) => 0,
+            NavSection::Chats(_) => 1,
+            NavSection::Settings => 2,
+            NavSection::Help => 3,
+        }
+    }
+
+    pub fn prev(&self) -> NavSection {
+        match self {
+            NavSection::Home(_) => Default::default(),
+            NavSection::Chats(_) => NavSection::Home(Default::default()),
+            NavSection::Settings => NavSection::Chats(Default::default()),
+            NavSection::Help => NavSection::Settings,
+        }
+    }
+
+    pub fn next(&self) -> NavSection {
+        match self {
+            NavSection::Home(_) => NavSection::Chats(Default::default()),
+            NavSection::Chats(_) => NavSection::Settings,
+            NavSection::Settings => NavSection::Help,
+            NavSection::Help => NavSection::Help,
+        }
+    }
+}
+
+impl Widget for &NavSection {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        match self {
+            NavSection::Home(section) => section.render(area, buf),
+            NavSection::Chats(section) => section.render(area, buf),
+            NavSection::Settings => {},
+            NavSection::Help => {}
+        }
+    }
+}
+
+pub trait UIKeyHandler {
+    fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent);
+}
+
+#[derive(Debug, Default)]
+pub struct State {
+    nav_bar: nav::NavBar,
+    section: NavSection,
+}
+
+impl Widget for &State {
     fn render(self, area: Rect, buf: &mut Buffer) {
         // Split the terminal vertically: top bar and main area
         let chunks = Layout::default()
@@ -25,60 +86,32 @@ impl Widget for &App {
             ])
             .split(area.clone());
 
-        // Navigation bar (top)
-        let nav_titles = [
-            ("Home", "<h>"),
-            ("Chats", "<c>"),
-            ("Settings", "<s>"),
-            ("Help", "?"),
-        ];
-        let nav_spans: Vec<Line> = nav_titles
-            .iter()
-            .map(|(title, key)| {
-                Line::default().spans(vec![
-                    Span::raw(*title),
-                    Span::raw(" "),
-                    Span::styled(*key, Style::default().fg(Color::Blue)),
-                ])
-            })
-            .collect();
-        let nav_bar = Block::default()
-            .title("Navigation")
-            .borders(Borders::ALL)
-            .style(Style::default().fg(Color::Yellow));
-        let nav_bar = Tabs::new(nav_spans)
-            .block(nav_bar)
-            .select(self.nav_index)
-            .highlight_style(
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .style(Style::default().fg(Color::White));
-        nav_bar.render(chunks[0], buf);
+        self.nav_bar.render(chunks[0], buf);
 
-        // Split the main area horizontally: left (chat), right (user list)
-        let main_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(15), // User List
-                Constraint::Percentage(85), // Chat Box
-            ])
-            .split(chunks[1]);
+        self.section.render(chunks[1], buf);
+    }
+}
 
-        // User list (left)
-        let users = vec![
-            ListItem::new("Alice"),
-            ListItem::new("Bob"),
-            ListItem::new("Carol"),
-        ];
-        let user_list =
-            List::new(users).block(Block::default().title("Users").borders(Borders::ALL));
-        user_list.render(main_chunks[0], buf);
+impl UIKeyHandler for State {
 
-        // Chat box (right)
-        let chat_box = Paragraph::new("Chat messages go here")
-            .block(Block::default().title("Chat").borders(Borders::ALL));
-        chat_box.render(main_chunks[1], buf);
+    fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
+                events.send(AppEvent::Quit)
+            }
+            KeyCode::Esc if self.section.index() == 0 => {
+                events.send(AppEvent::Quit)
+            }
+            KeyCode::Right if key_event.modifiers == KeyModifiers::SHIFT => {
+                self.section = self.section.next();
+                self.nav_bar.navigate(&self.section);
+            }
+            KeyCode::Left if key_event.modifiers == KeyModifiers::SHIFT => {
+                self.section = self.section.prev();
+                self.nav_bar.navigate(&self.section);
+            }
+            // Other handlers you could add here.
+            _ => {}
+        }
     }
 }

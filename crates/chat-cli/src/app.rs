@@ -1,4 +1,4 @@
-use crate::event::{AppEvent, Event, EventHandler};
+use crate::{event::{AppEvent, Event, EventHandler}, ui::{self, UIKeyHandler}};
 
 use ratatui::{
     DefaultTerminal,
@@ -12,18 +12,18 @@ use streuen_chat::app::ToChat;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    /// Nav Bar Index.
-    pub nav_index: usize,
     /// Event handler.
     pub events: EventHandler,
+    /// UI component state
+    pub ui_state: ui::State,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             running: true,
-            nav_index: 0,
             events: EventHandler::new(),
+            ui_state: Default::default(),
         }
     }
 }
@@ -55,7 +55,7 @@ impl App {
         chat_app.chat_dispatch(ToChat::ListenOn("/ip4/0.0.0.0/tcp/4001".parse()?));
 
         while self.running {
-            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+            terminal.draw(|frame| frame.render_widget(&self.ui_state, frame.area()))?;
             match self.events.next().await? {
                 Event::Tick => self.tick(),
                 Event::Crossterm(event) => match event {
@@ -63,8 +63,6 @@ impl App {
                     _ => {}
                 },
                 Event::App(app_event) => match app_event {
-                    AppEvent::Increment => self.increment_counter(),
-                    AppEvent::Decrement => self.decrement_counter(),
                     AppEvent::Quit => self.quit(),
                 },
             }
@@ -74,16 +72,7 @@ impl App {
 
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
-        match key_event.code {
-            KeyCode::Esc | KeyCode::Char('q') => self.events.send(AppEvent::Quit),
-            KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
-                self.events.send(AppEvent::Quit)
-            }
-            KeyCode::Right => self.events.send(AppEvent::Increment),
-            KeyCode::Left => self.events.send(AppEvent::Decrement),
-            // Other handlers you could add here.
-            _ => {}
-        }
+        self.ui_state.handle(&mut self.events, key_event);
         Ok(())
     }
 
@@ -96,13 +85,5 @@ impl App {
     /// Set running to false to quit the application.
     pub fn quit(&mut self) {
         self.running = false;
-    }
-
-    pub fn increment_counter(&mut self) {
-        // self.counter = self.counter.saturating_add(1);
-    }
-
-    pub fn decrement_counter(&mut self) {
-        // self.counter = self.counter.saturating_sub(1);
     }
 }
