@@ -1,6 +1,7 @@
-# Decentral Manage
+# Streuen
 
-Applications built to be deployed using IPFS.
+As a german work for scatter, streuen is a set of peer to peer applications
+intended to be built based off decentralized principles, using protocols such as LibP2P and IPFS.
 
 ## Setup
 
@@ -10,10 +11,10 @@ Note: This repository uses [asdf](https://asdf-vm.com/guide/getting-started.html
 whenever possible for tool installations. The versions are
 stored in the [.tool-versions](./.tool-versions).
 
-## [Text](./crates/text/)
+## [Chat CLI](./crates/chat-cli/)
 
-A simple text messaging application.
+CLI peer to peer chat application.
 
-## [Storage](./crates/storage/)
+## [Chat Web](./crates/chat-web/)
 
-A storage application for storing files on IPFS.
+A web UI built using Rust WASM intended to be deployed on IPFS.
