@@ -1,7 +1,7 @@
 pub(crate) mod behaviour;
 
-use futures::channel::mpsc;
 use futures::FutureExt;
+use futures::channel::mpsc;
 use libp2p::{
     StreamProtocol, Swarm, SwarmBuilder, multiaddr, noise, request_response, swarm::SwarmEvent,
     yamux,
@@ -31,6 +31,13 @@ async fn run_swarm_loop(mut swarm: Swarm<behaviour::ChatBehaviour>) {
         if let Some(event) = swarm.next().await {
             match event {
                 SwarmEvent::Behaviour(ref behavior_event) => match behavior_event {
+                    ChatBehaviourEvent::Inner(behaviour::ChatToSwarm::ListenOn(addr)) => {
+                        if let Err(err) = swarm.listen_on(addr.clone()) {
+                            tracing::error!("Error listening to address [{addr}]: {err:?}")
+                        } else {
+                            tracing::info!("Listening to address: {addr}")
+                        }
+                    }
                     ChatBehaviourEvent::Inner(behaviour::ChatToSwarm::AddBoostrapPeer(addr)) => {
                         if let Some(multiaddr::Protocol::P2p(peer_id)) = addr.iter().last() {
                             swarm.behaviour_mut().kad.as_mut().map(|k| {
@@ -38,7 +45,7 @@ async fn run_swarm_loop(mut swarm: Swarm<behaviour::ChatBehaviour>) {
                                 let _ = k.bootstrap();
                             });
                         } else {
-                            tracing::debug!("Invalid bootstrap address: {addr}")
+                            tracing::error!("Invalid bootstrap address: {addr}")
                         }
                     }
                     ChatBehaviourEvent::RequestResponse(request_response::Event::Message {
@@ -84,7 +91,7 @@ fn build_swarm(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn spawn_swarm_loop<F: Future<Output = ()> + 'static>(future: F) {
+fn spawn_swarm_loop<F: Future<Output = ()> + Send + 'static>(future: F) {
     wasm_bindgen_futures::spawn_local(future);
 }
 

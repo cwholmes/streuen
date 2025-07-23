@@ -13,14 +13,13 @@ use serde::{Deserialize, Serialize};
 
 use std::{
     collections::VecDeque,
-    task::{Context, Poll},
     sync::{Arc, Mutex},
+    task::{Context, Poll},
 };
-
-use crate::app;
 
 #[derive(Clone, Debug)]
 pub enum ToChat {
+    ListenOn(Multiaddr),
     AddBoostrapPeer(Multiaddr),
     Connect(PeerId),
     SendMessage(PeerId, String),
@@ -28,6 +27,7 @@ pub enum ToChat {
 
 #[derive(Clone, Debug)]
 pub enum ChatToSwarm {
+    ListenOn(Multiaddr),
     AddBoostrapPeer(Multiaddr),
 }
 
@@ -84,11 +84,16 @@ impl NetworkBehaviour for InnerChatBehavior {
         let mut queue = self.queue.lock().unwrap();
         if let Some(event) = queue.pop_front() {
             match event {
+                ToChat::ListenOn(addr) => {
+                    return Poll::Ready(ToSwarm::GenerateEvent(ChatToSwarm::ListenOn(addr)));
+                }
                 ToChat::AddBoostrapPeer(addr) => {
                     return Poll::Ready(ToSwarm::GenerateEvent(ChatToSwarm::AddBoostrapPeer(addr)));
                 }
                 ToChat::Connect(peer_id) => {
-                    return Poll::Ready(ToSwarm::Dial { opts: peer_id.into() });
+                    return Poll::Ready(ToSwarm::Dial {
+                        opts: peer_id.into(),
+                    });
                 }
                 ToChat::SendMessage(peer_id, message) => {
                     // let request = behaviour::ChatSendMessage {

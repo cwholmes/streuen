@@ -7,7 +7,8 @@ use std::rc::Rc;
 use futures::channel::mpsc;
 use libp2p::{Multiaddr, PeerId, identity::Keypair};
 
-pub use crate::libp2p::behaviour::{InnerChatBehavior, ToChat};
+use crate::libp2p::behaviour::InnerChatBehavior;
+pub use crate::libp2p::behaviour::ToChat;
 
 pub struct ChatApp {
     users: users::Users,

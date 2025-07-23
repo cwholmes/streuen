@@ -1,8 +1,11 @@
 use crate::event::{AppEvent, Event, EventHandler};
+
 use ratatui::{
     DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
 };
+
+use streuen_chat::app::ToChat;
 
 /// Application.
 #[derive(Debug)]
@@ -33,7 +36,24 @@ impl App {
 
     /// Run the application's main loop.
     pub async fn run(mut self, mut terminal: DefaultTerminal) -> color_eyre::Result<()> {
-        let _chat_app = streuen_chat::ChatApp::new("Me".to_string())?;
+        let mut chat_app = streuen_chat::ChatApp::new("Me".to_string())?;
+
+        let bootstrap_peers = [
+            "QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+            "QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
+            "QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+            "QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+        ];
+
+        for bootstrap_peer in bootstrap_peers {
+            let bootstrap_addr = format!("/dnsaddr/bootstrap.libp2p.io/p2p/{bootstrap_peer}")
+                .parse()
+                .unwrap();
+            chat_app.chat_dispatch(ToChat::AddBoostrapPeer(bootstrap_addr));
+        }
+
+        chat_app.chat_dispatch(ToChat::ListenOn("/ip4/0.0.0.0/tcp/4001".parse()?));
+
         while self.running {
             terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
             match self.events.next().await? {

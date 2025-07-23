@@ -7,7 +7,39 @@ edition.workspace = true
 [dependencies]
 color-eyre = { workspace = true }
 crossterm = { workspace = true, features = ["event-stream"] }
+directories = { workspace = true }
 futures = { workspace = true }
 ratatui = { workspace = true }
 streuen-chat = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+tracing-error = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[dependencies.libp2p]
+workspace = true
+features = [
+    "ed25519",
+    "ecdsa",
+    "secp256k1",
+    "rsa",
+    "identify",
+    "ping",
+    "wasm-bindgen",
+    "macros",
+    "kad",
+    "request-response",
+    "cbor",
+    "kad",
+    "dcutr",
+    "gossipsub",
+    "relay",
+    "rendezvous",
+    "noise",
+    "yamux",
+    "tls",
+    "tokio",
+    "tcp",
+    "quic",
+    "dns",
+]
