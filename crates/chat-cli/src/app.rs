@@ -12,8 +12,8 @@ use streuen_chat::app::ToChat;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    /// Counter.
-    pub counter: u8,
+    /// Nav Bar Index.
+    pub nav_index: usize,
     /// Event handler.
     pub events: EventHandler,
 }
@@ -22,7 +22,7 @@ impl Default for App {
     fn default() -> Self {
         Self {
             running: true,
-            counter: 0,
+            nav_index: 0,
             events: EventHandler::new(),
         }
     }
@@ -99,10 +99,10 @@ impl App {
     }
 
     pub fn increment_counter(&mut self) {
-        self.counter = self.counter.saturating_add(1);
+        // self.counter = self.counter.saturating_add(1);
     }
 
     pub fn decrement_counter(&mut self) {
-        self.counter = self.counter.saturating_sub(1);
+        // self.counter = self.counter.saturating_sub(1);
     }
 }
