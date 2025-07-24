@@ -24,7 +24,6 @@ impl Default for NavBar {
 }
 
 impl Widget for &NavBar {
-
     fn render(self, area: Rect, buf: &mut Buffer) {
         // Split the terminal vertically: top bar and main area
         let chunks = Layout::default()

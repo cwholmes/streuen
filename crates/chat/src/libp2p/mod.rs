@@ -57,7 +57,7 @@ async fn run_swarm_loop(mut swarm: Swarm<behaviour::ChatBehaviour>) {
                     }
                     _ => tracing::debug!("{event:?}"),
                 },
-                _ => {}
+                event => tracing::info!("Swarm Event: {event:?}"),
             }
         }
     }

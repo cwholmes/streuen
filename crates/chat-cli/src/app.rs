@@ -1,4 +1,7 @@
-use crate::{event::{AppEvent, Event, EventHandler}, ui::{self, UIKeyHandler}};
+use crate::{
+    event::{AppEvent, Event, EventHandler},
+    ui::{self, UIKeyHandler},
+};
 
 use ratatui::{
     DefaultTerminal,

@@ -9,15 +9,15 @@ use ratatui::{
 use crate::event::AppEvent;
 
 #[derive(Debug, Clone)]
-pub struct Home {}
+pub struct Settings {}
 
-impl Default for Home {
+impl Default for Settings {
     fn default() -> Self {
         Self {}
     }
 }
 
-impl Widget for &Home {
+impl Widget for &Settings {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let block = Block::bordered()
             .title("streuen-chat-cli")
@@ -39,7 +39,7 @@ impl Widget for &Home {
     }
 }
 
-impl super::UIKeyHandler for Home {
+impl super::UIKeyHandler for Settings {
     fn handle(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => events.send(AppEvent::Quit),

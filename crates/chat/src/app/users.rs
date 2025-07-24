@@ -47,10 +47,6 @@ impl Users {
         }
     }
 
-    pub(crate) fn keypair(&self) -> Keypair {
-        self.current_user.keypair.clone()
-    }
-
     pub(crate) fn current_user(&self) -> Rc<User> {
         self.current_user.user.clone()
     }

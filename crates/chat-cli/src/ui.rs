@@ -1,4 +1,4 @@
-use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -10,12 +10,13 @@ use crate::event::{AppEvent, EventHandler};
 mod chats;
 mod home;
 mod nav;
+mod settings;
 
 #[derive(Debug)]
 pub enum NavSection {
     Home(home::Home),
     Chats(chats::Chats),
-    Settings,
+    Settings(settings::Settings),
     Help,
 }
 
@@ -25,31 +26,42 @@ impl Default for NavSection {
     }
 }
 
+impl UIKeyHandler for NavSection {
+    fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
+        match self {
+            NavSection::Home(section) => section.handle(events, key_event),
+            NavSection::Chats(section) => section.handle(events, key_event),
+            NavSection::Settings(section) => section.handle(events, key_event),
+            NavSection::Help => {}
+        }
+    }
+}
+
 impl NavSection {
     pub fn index(&self) -> usize {
         match self {
             NavSection::Home(_) => 0,
             NavSection::Chats(_) => 1,
-            NavSection::Settings => 2,
+            NavSection::Settings(_) => 2,
             NavSection::Help => 3,
         }
     }
 
     pub fn prev(&self) -> NavSection {
         match self {
-            NavSection::Home(_) => Default::default(),
+            NavSection::Home(_) => NavSection::Help,
             NavSection::Chats(_) => NavSection::Home(Default::default()),
-            NavSection::Settings => NavSection::Chats(Default::default()),
-            NavSection::Help => NavSection::Settings,
+            NavSection::Settings(_) => NavSection::Chats(Default::default()),
+            NavSection::Help => NavSection::Settings(Default::default()),
         }
     }
 
     pub fn next(&self) -> NavSection {
         match self {
             NavSection::Home(_) => NavSection::Chats(Default::default()),
-            NavSection::Chats(_) => NavSection::Settings,
-            NavSection::Settings => NavSection::Help,
-            NavSection::Help => NavSection::Help,
+            NavSection::Chats(_) => NavSection::Settings(Default::default()),
+            NavSection::Settings(_) => NavSection::Help,
+            NavSection::Help => NavSection::Home(Default::default()),
         }
     }
 }
@@ -59,7 +71,7 @@ impl Widget for &NavSection {
         match self {
             NavSection::Home(section) => section.render(area, buf),
             NavSection::Chats(section) => section.render(area, buf),
-            NavSection::Settings => {},
+            NavSection::Settings(section) => section.render(area, buf),
             NavSection::Help => {}
         }
     }
@@ -93,14 +105,13 @@ impl Widget for &State {
 }
 
 impl UIKeyHandler for State {
-
     fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
-                events.send(AppEvent::Quit)
+                events.send(AppEvent::Quit);
             }
             KeyCode::Esc if self.section.index() == 0 => {
-                events.send(AppEvent::Quit)
+                events.send(AppEvent::Quit);
             }
             KeyCode::Right if key_event.modifiers == KeyModifiers::SHIFT => {
                 self.section = self.section.next();
@@ -111,7 +122,9 @@ impl UIKeyHandler for State {
                 self.nav_bar.navigate(&self.section);
             }
             // Other handlers you could add here.
-            _ => {}
+            _ => {
+                self.section.handle(events, key_event);
+            }
         }
     }
 }

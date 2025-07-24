@@ -37,10 +37,6 @@ impl ChatApp {
         })
     }
 
-    pub(crate) fn keypair(&self) -> Keypair {
-        self.users.keypair()
-    }
-
     pub fn current_user(&self) -> users::User {
         self.users.current_user().as_ref().clone()
     }

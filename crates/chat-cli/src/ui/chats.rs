@@ -1,9 +1,11 @@
-use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
     widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
 };
+
+use crate::event::AppEvent;
 
 #[derive(Debug, Clone)]
 pub struct Chats {}
@@ -15,7 +17,6 @@ impl Default for Chats {
 }
 
 impl Widget for &Chats {
-
     fn render(self, area: Rect, buf: &mut Buffer) {
         // Split the main area horizontally: left (chat), right (user list)
         let main_chunks = Layout::default()
@@ -45,6 +46,9 @@ impl Widget for &Chats {
 
 impl super::UIKeyHandler for Chats {
     fn handle(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
-        
+        match key_event.code {
+            KeyCode::Esc => events.send(AppEvent::Quit),
+            _ => {}
+        }
     }
 }
