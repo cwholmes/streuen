@@ -1,10 +1,8 @@
-use std::rc::Rc;
-
 use libp2p::{PeerId, identity::Keypair};
 
 #[derive(Clone, Debug)]
 pub struct CurrentUser {
-    user: Rc<User>,
+    user: User,
     keypair: Keypair,
 }
 
@@ -32,7 +30,6 @@ pub struct Users {
 
 impl Users {
     pub fn new(current_user: User, keypair: Keypair) -> Self {
-        let current_user = Rc::new(current_user);
         let current_user = CurrentUser {
             user: current_user,
             keypair,
@@ -47,7 +44,7 @@ impl Users {
         }
     }
 
-    pub(crate) fn current_user(&self) -> Rc<User> {
+    pub(crate) fn current_user(&self) -> User {
         self.current_user.user.clone()
     }
 }

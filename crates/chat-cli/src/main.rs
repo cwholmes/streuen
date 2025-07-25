@@ -3,7 +3,6 @@ pub mod config;
 pub mod event;
 pub mod ui;
 
-use color_eyre::eyre::Result;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{self, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -17,13 +16,13 @@ async fn main() -> color_eyre::Result<()> {
     initialize_logging(&project_config)?;
 
     let terminal = ratatui::init();
-    let result = App::new().run(terminal).await;
+    let result = App::new()?.run(terminal).await;
     ratatui::restore();
 
     result
 }
 
-fn initialize_logging(proj_config: &config::ProjectConfig) -> Result<()> {
+fn initialize_logging(proj_config: &config::ProjectConfig) -> color_eyre::Result<()> {
     let data_dir = proj_config.data_dir();
     let log_file = std::fs::File::create(data_dir.join("streuen_chat.log"))?;
     let env_filter = tracing_subscriber::EnvFilter::builder()

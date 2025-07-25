@@ -1,6 +1,8 @@
 #[derive(Debug, thiserror::Error)]
 pub enum ChatAppError {
     #[error(transparent)]
+    IoError(#[from] std::io::Error),
+    #[error(transparent)]
     NoiseError(#[from] libp2p::noise::Error),
     #[error(transparent)]
     BehaviorError(#[from] libp2p::BehaviourBuilderError),

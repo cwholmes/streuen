@@ -4,8 +4,7 @@ mod users;
 
 use std::rc::Rc;
 
-use futures::channel::mpsc;
-use libp2p::{Multiaddr, PeerId, identity::Keypair};
+use libp2p::identity::Keypair;
 
 use crate::libp2p::behaviour::InnerChatBehavior;
 pub use crate::libp2p::behaviour::ToChat;

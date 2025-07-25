@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -7,7 +7,6 @@ use ratatui::{
 
 use crate::event::AppEvent;
 
-#[derive(Debug, Clone)]
 pub struct Chats {}
 
 impl Default for Chats {
@@ -44,8 +43,8 @@ impl Widget for &Chats {
     }
 }
 
-impl super::UIKeyHandler for Chats {
-    fn handle(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
+impl super::Handler for Chats {
+    fn handle_key(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => events.send(AppEvent::Quit),
             _ => {}

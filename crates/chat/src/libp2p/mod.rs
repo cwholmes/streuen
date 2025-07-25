@@ -1,7 +1,6 @@
 pub(crate) mod behaviour;
 
-use futures::FutureExt;
-use futures::channel::mpsc;
+use libp2p::mdns;
 use libp2p::{
     StreamProtocol, Swarm, SwarmBuilder, multiaddr, noise, request_response, swarm::SwarmEvent,
     yamux,
@@ -55,11 +54,24 @@ async fn run_swarm_loop(mut swarm: Swarm<behaviour::ChatBehaviour>) {
                     }) => {
                         tracing::debug!("Received message: {peer} {message:?}")
                     }
+                    ChatBehaviourEvent::Mdns(mdns::Event::Discovered(peers)) => {
+                        for (peer_id, _addr) in peers {
+                            tracing::info!("Peer discovered from mDNS: {peer_id}");
+                            if swarm.is_connected(peer_id) {
+                                continue;
+                            }
+                            let _ = swarm.dial(peer_id.clone());
+                        }
+                    }
                     _ => tracing::debug!("{event:?}"),
                 },
                 event => tracing::info!("Swarm Event: {event:?}"),
             }
         }
+
+        swarm
+            .external_addresses()
+            .for_each(|a| tracing::info!("External address: {a}"));
     }
 }
 
@@ -107,6 +119,7 @@ fn build_swarm(
             yamux::Config::default,
         )?
         .with_quic()
+        .with_dns()?
         .with_relay_client(noise::Config::new, yamux::Config::default)?
         .with_behaviour(|keypair, relay| behaviour::ChatBehaviour::new(keypair, Some(relay)))
         .unwrap(); // this is Infallible so this is safe

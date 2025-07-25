@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
@@ -8,7 +8,6 @@ use ratatui::{
 
 use crate::event::AppEvent;
 
-#[derive(Debug, Clone)]
 pub struct Home {}
 
 impl Default for Home {
@@ -27,7 +26,7 @@ impl Widget for &Home {
         let text = "Welcome to Streuen.\n\
                 `Ctrl-C` will close the application.\n\
                 `Esc` will return to the previous tab unless on the home page, which will close the application.\n\
-                Press navigate to the desired tab.";
+                Please navigate to the desired tab.";
 
         let paragraph = Paragraph::new(text)
             .block(block)
@@ -39,8 +38,8 @@ impl Widget for &Home {
     }
 }
 
-impl super::UIKeyHandler for Home {
-    fn handle(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
+impl super::Handler for Home {
+    fn handle_key(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => events.send(AppEvent::Quit),
             _ => {}

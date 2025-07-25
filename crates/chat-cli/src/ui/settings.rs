@@ -1,4 +1,5 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
+use libp2p::PeerId;
 use ratatui::{
     buffer::Buffer,
     layout::{Alignment, Rect},
@@ -8,12 +9,13 @@ use ratatui::{
 
 use crate::event::AppEvent;
 
-#[derive(Debug, Clone)]
-pub struct Settings {}
+pub struct Settings {
+    local_peer_id: PeerId,
+}
 
-impl Default for Settings {
-    fn default() -> Self {
-        Self {}
+impl Settings {
+    pub fn new(local_peer_id: PeerId) -> Self {
+        Self { local_peer_id }
     }
 }
 
@@ -24,10 +26,13 @@ impl Widget for &Settings {
             .title_alignment(Alignment::Center)
             .border_type(BorderType::Rounded);
 
-        let text = "Welcome to Streuen.\n\
+        let text = format!(
+            "Welcome to Streuen.\n\
                 `Ctrl-C` will close the application.\n\
                 `Esc` will return to the previous tab unless on the home page, which will close the application.\n\
-                Press navigate to the desired tab.";
+                local_peer_id = {}",
+            self.local_peer_id,
+        );
 
         let paragraph = Paragraph::new(text)
             .block(block)
@@ -39,8 +44,8 @@ impl Widget for &Settings {
     }
 }
 
-impl super::UIKeyHandler for Settings {
-    fn handle(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
+impl super::Handler for Settings {
+    fn handle_key(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Esc => events.send(AppEvent::Quit),
             _ => {}

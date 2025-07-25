@@ -1,13 +1,14 @@
 use libp2p::{
-    Multiaddr, PeerId,
+    Multiaddr, PeerId, autonat,
     core::{Endpoint, transport::PortUse},
-    gossipsub, identify,
+    dcutr, gossipsub, identify,
     identity::Keypair,
-    kad, relay, request_response,
+    kad, mdns, relay, request_response,
     swarm::{
         ConnectionDenied, ConnectionId, FromSwarm, NetworkBehaviour, THandler, THandlerInEvent,
         THandlerOutEvent, ToSwarm, behaviour::toggle::Toggle, dummy,
     },
+    upnp,
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +25,13 @@ pub struct ChatBehaviour {
     relay_client: Toggle<relay::client::Behaviour>,
     pub kad: Toggle<kad::Behaviour<kad::store::MemoryStore>>,
     pub gossipsub: gossipsub::Behaviour,
-    pub identify: identify::Behaviour,
+    identify: identify::Behaviour,
+    dcutr: dcutr::Behaviour,
+    autonat: autonat::Behaviour,
+    #[cfg(not(target_arch = "wasm32"))]
+    upnp: upnp::tokio::Behaviour,
+    #[cfg(not(target_arch = "wasm32"))]
+    mdns: mdns::tokio::Behaviour,
     pub inner: InnerChatBehavior,
 }
 
@@ -57,12 +64,27 @@ impl ChatBehaviour {
             keypair.public(),
         ));
 
+        let dcutr = dcutr::Behaviour::new(local_peer_id.clone());
+
+        let autonat = autonat::Behaviour::new(local_peer_id, autonat::Config::default());
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let upnp = upnp::tokio::Behaviour::default();
+        #[cfg(not(target_arch = "wasm32"))]
+        let mdns = mdns::tokio::Behaviour::new(Default::default(), local_peer_id)?;
+
         Ok(Self {
             request_response,
             relay_client: relay_client.into(),
             kad: Some(kad).into(),
             gossipsub,
             identify,
+            dcutr,
+            autonat,
+            #[cfg(not(target_arch = "wasm32"))]
+            upnp,
+            #[cfg(not(target_arch = "wasm32"))]
+            mdns,
             inner: InnerChatBehavior {
                 queue: Arc::new(Mutex::new(VecDeque::new())),
             },
@@ -120,7 +142,7 @@ impl NetworkBehaviour for InnerChatBehavior {
         Ok(dummy::ConnectionHandler)
     }
 
-    fn on_swarm_event(&mut self, event: FromSwarm) {}
+    fn on_swarm_event(&mut self, _event: FromSwarm) {}
 
     fn on_connection_handler_event(
         &mut self,

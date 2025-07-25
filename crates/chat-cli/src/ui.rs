@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Rect},
@@ -12,7 +12,6 @@ mod home;
 mod nav;
 mod settings;
 
-#[derive(Debug)]
 pub enum NavSection {
     Home(home::Home),
     Chats(chats::Chats),
@@ -26,12 +25,12 @@ impl Default for NavSection {
     }
 }
 
-impl UIKeyHandler for NavSection {
-    fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
+impl Handler for NavSection {
+    fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
         match self {
-            NavSection::Home(section) => section.handle(events, key_event),
-            NavSection::Chats(section) => section.handle(events, key_event),
-            NavSection::Settings(section) => section.handle(events, key_event),
+            NavSection::Home(section) => section.handle_key(events, key_event),
+            NavSection::Chats(section) => section.handle_key(events, key_event),
+            NavSection::Settings(section) => section.handle_key(events, key_event),
             NavSection::Help => {}
         }
     }
@@ -47,19 +46,23 @@ impl NavSection {
         }
     }
 
-    pub fn prev(&self) -> NavSection {
+    pub fn prev(&self, state: &State) -> NavSection {
         match self {
             NavSection::Home(_) => NavSection::Help,
             NavSection::Chats(_) => NavSection::Home(Default::default()),
             NavSection::Settings(_) => NavSection::Chats(Default::default()),
-            NavSection::Help => NavSection::Settings(Default::default()),
+            NavSection::Help => {
+                NavSection::Settings(settings::Settings::new(state.local_peer_id.clone()))
+            }
         }
     }
 
-    pub fn next(&self) -> NavSection {
+    pub fn next(&self, state: &State) -> NavSection {
         match self {
             NavSection::Home(_) => NavSection::Chats(Default::default()),
-            NavSection::Chats(_) => NavSection::Settings(Default::default()),
+            NavSection::Chats(_) => {
+                NavSection::Settings(settings::Settings::new(state.local_peer_id.clone()))
+            }
             NavSection::Settings(_) => NavSection::Help,
             NavSection::Help => NavSection::Home(Default::default()),
         }
@@ -77,14 +80,37 @@ impl Widget for &NavSection {
     }
 }
 
-pub trait UIKeyHandler {
-    fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent);
+pub trait Handler {
+    fn handle(&mut self, events: &mut EventHandler, event: crate::event::Event) {
+        match event {
+            crate::event::Event::App(_) => {}
+            crate::event::Event::Tick => {}
+            crate::event::Event::Crossterm(crossterm_event) => match crossterm_event {
+                CrosstermEvent::Key(key_event) => {
+                    self.handle_key(events, key_event);
+                }
+                _ => {}
+            },
+        }
+    }
+
+    fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent);
 }
 
-#[derive(Debug, Default)]
 pub struct State {
+    local_peer_id: libp2p::PeerId,
     nav_bar: nav::NavBar,
     section: NavSection,
+}
+
+impl State {
+    pub fn new(chat_app: &streuen_chat::ChatApp) -> Self {
+        Self {
+            local_peer_id: chat_app.current_user().peer_id(),
+            nav_bar: Default::default(),
+            section: Default::default(),
+        }
+    }
 }
 
 impl Widget for &State {
@@ -104,26 +130,23 @@ impl Widget for &State {
     }
 }
 
-impl UIKeyHandler for State {
-    fn handle(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
+impl Handler for State {
+    fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
                 events.send(AppEvent::Quit);
             }
-            KeyCode::Esc if self.section.index() == 0 => {
-                events.send(AppEvent::Quit);
-            }
             KeyCode::Right if key_event.modifiers == KeyModifiers::SHIFT => {
-                self.section = self.section.next();
+                self.section = self.section.next(&self);
                 self.nav_bar.navigate(&self.section);
             }
             KeyCode::Left if key_event.modifiers == KeyModifiers::SHIFT => {
-                self.section = self.section.prev();
+                self.section = self.section.prev(&self);
                 self.nav_bar.navigate(&self.section);
             }
             // Other handlers you could add here.
             _ => {
-                self.section.handle(events, key_event);
+                self.section.handle_key(events, key_event);
             }
         }
     }

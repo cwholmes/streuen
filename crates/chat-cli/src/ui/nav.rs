@@ -6,7 +6,6 @@ use ratatui::{
     widgets::{Block, Borders, Tabs, Widget},
 };
 
-#[derive(Debug)]
 pub struct NavBar {
     index: usize,
 }

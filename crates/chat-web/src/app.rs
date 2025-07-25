@@ -27,6 +27,9 @@ impl<'a> Component for App {
             chat_app.current_user().peer_id().to_base58()
         );
 
+        // maybe bootstrap address to be used
+        // /dns4/ws-star.discovery.libp2p.io/tcp/443/wss/p2p-websocket-star
+
         Self { chat_app }
     }
 
