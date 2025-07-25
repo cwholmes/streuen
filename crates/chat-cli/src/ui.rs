@@ -131,6 +131,21 @@ impl Widget for &State {
 }
 
 impl Handler for State {
+    fn handle(&mut self, events: &mut EventHandler, event: crate::event::Event) {
+        self.section.handle(events, event.clone());
+        match event {
+            crate::event::Event::App(_) => {}
+            crate::event::Event::Tick => {}
+            crate::event::Event::Crossterm(crossterm_event) => match crossterm_event {
+                CrosstermEvent::Key(key_event) => {
+                    self.handle_key(events, key_event);
+                }
+                _ => {}
+            },
+        }
+
+    }
+
     fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
@@ -144,10 +159,7 @@ impl Handler for State {
                 self.section = self.section.prev(&self);
                 self.nav_bar.navigate(&self.section);
             }
-            // Other handlers you could add here.
-            _ => {
-                self.section.handle_key(events, key_event);
-            }
+            _ => {},
         }
     }
 }

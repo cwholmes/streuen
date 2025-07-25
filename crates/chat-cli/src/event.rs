@@ -26,6 +26,15 @@ pub enum Event {
     App(AppEvent),
 }
 
+impl Event {
+    pub(crate) fn should_quit(&self) -> bool {
+        match self {
+            Event::App(AppEvent::Quit) => true,
+            _ => false,
+        }
+    }
+}
+
 /// Application events.
 ///
 /// You can extend this enum with your own custom events.

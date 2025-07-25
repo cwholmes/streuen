@@ -1,9 +1,9 @@
 use crate::{
-    event::{AppEvent, Event, EventHandler},
+    event::EventHandler,
     ui::{self, Handler},
 };
 
-use ratatui::{DefaultTerminal, crossterm::event::KeyEvent};
+use ratatui::DefaultTerminal;
 
 use streuen_chat::app::ToChat;
 
@@ -57,31 +57,15 @@ impl App {
 
         while self.running {
             terminal.draw(|frame| frame.render_widget(&self.ui_state, frame.area()))?;
-            match self.events.next().await? {
-                Event::Tick => self.tick(),
-                Event::Crossterm(event) => match event {
-                    crossterm::event::Event::Key(key_event) => self.handle_key_events(key_event)?,
-                    _ => {}
-                },
-                Event::App(app_event) => match app_event {
-                    AppEvent::Quit => self.quit(),
-                },
+            let event = self.events.next().await?;
+            if event.should_quit() {
+                self.quit();
+            } else {
+                self.ui_state.handle(&mut self.events, event);
             }
         }
         Ok(())
     }
-
-    /// Handles the key events and updates the state of [`App`].
-    pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
-        self.ui_state.handle_key(&mut self.events, key_event);
-        Ok(())
-    }
-
-    /// Handles the tick event of the terminal.
-    ///
-    /// The tick event is where you can update the state of your application with any logic that
-    /// needs to be updated at a fixed frame rate. E.g. polling a server, updating an animation.
-    pub fn tick(&self) {}
 
     /// Set running to false to quit the application.
     pub fn quit(&mut self) {
