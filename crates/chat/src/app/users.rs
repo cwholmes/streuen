@@ -24,7 +24,7 @@ impl User {
 
 #[derive(Clone, Debug)]
 pub struct Users {
-    users: Vec<Rc<User>>,
+    users: Vec<User>,
     current_user: CurrentUser,
 }
 

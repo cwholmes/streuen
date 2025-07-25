@@ -37,7 +37,7 @@ impl ChatApp {
     }
 
     pub fn current_user(&self) -> users::User {
-        self.users.current_user().as_ref().clone()
+        self.users.current_user()
     }
 
     pub fn chat_dispatch(&mut self, event: ToChat) {
