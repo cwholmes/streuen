@@ -1,12 +1,8 @@
-pub mod app;
-pub mod config;
-pub mod event;
-pub mod ui;
-
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{self, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::app::App;
+use streuen_chat_cli::app::App;
+use streuen_chat_cli::config;
 
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
