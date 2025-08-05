@@ -6,15 +6,10 @@ use ratatui::{
     widgets::{Block, BorderType, Paragraph, Widget},
 };
 
-use crate::event::AppEvent;
+use crate::event::{AppEvent, EventSender};
 
+#[derive(Default)]
 pub struct Home {}
-
-impl Default for Home {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Widget for &Home {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -39,10 +34,10 @@ impl Widget for &Home {
 }
 
 impl super::Handler for Home {
-    fn handle_key(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
+    fn handle_key(&mut self, event_sender: &mut EventSender, key_event: KeyEvent) -> color_eyre::Result<()> {
         match key_event.code {
-            KeyCode::Esc => events.send(AppEvent::Quit),
-            _ => {}
+            KeyCode::Esc => event_sender.send(AppEvent::Quit),
+            _ => Ok(()),
         }
     }
 }

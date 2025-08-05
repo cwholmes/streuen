@@ -5,15 +5,10 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
 };
 
-use crate::event::AppEvent;
+use crate::event::{AppEvent, EventSender};
 
+#[derive(Default)]
 pub struct Chats {}
-
-impl Default for Chats {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Widget for &Chats {
     fn render(self, area: Rect, buf: &mut Buffer) {
@@ -44,10 +39,10 @@ impl Widget for &Chats {
 }
 
 impl super::Handler for Chats {
-    fn handle_key(&mut self, events: &mut crate::event::EventHandler, key_event: KeyEvent) {
+    fn handle_key(&mut self, event_sender: &mut EventSender, key_event: KeyEvent) -> color_eyre::Result<()> {
         match key_event.code {
-            KeyCode::Esc => events.send(AppEvent::Quit),
-            _ => {}
+            KeyCode::Esc => event_sender.send(AppEvent::Quit),
+            _ => Ok(()),
         }
     }
 }

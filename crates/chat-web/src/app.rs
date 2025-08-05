@@ -20,7 +20,7 @@ impl<'a> Component for App {
     type Properties = ();
 
     fn create(_ctx: &Context<Self>) -> Self {
-        let mut chat_app = ChatApp::new("Me".to_string()).unwrap();
+        let chat_app = ChatApp::new("Me".to_string()).unwrap();
 
         tracing::debug!(
             "local_id = {}",
@@ -28,6 +28,7 @@ impl<'a> Component for App {
         );
 
         // maybe bootstrap address to be used
+        // need to determine the peer id of the bootstrap peer
         // /dns4/ws-star.discovery.libp2p.io/tcp/443/wss/p2p-websocket-star
 
         Self { chat_app }

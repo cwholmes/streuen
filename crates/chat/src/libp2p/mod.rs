@@ -1,5 +1,6 @@
 pub(crate) mod behaviour;
 
+#[cfg(not(target_arch = "wasm32"))]
 use libp2p::mdns;
 use libp2p::{
     StreamProtocol, Swarm, SwarmBuilder, multiaddr, noise, request_response, swarm::SwarmEvent,
@@ -54,24 +55,33 @@ async fn run_swarm_loop(mut swarm: Swarm<behaviour::ChatBehaviour>) {
                     }) => {
                         tracing::debug!("Received message: {peer} {message:?}")
                     }
+                    #[cfg(not(target_arch = "wasm32"))]
                     ChatBehaviourEvent::Mdns(mdns::Event::Discovered(peers)) => {
                         for (peer_id, _addr) in peers {
                             tracing::info!("Peer discovered from mDNS: {peer_id}");
+                            // swarm.behaviour_mut().gossipsub.add_explicit_peer(peer_id);
                             if swarm.is_connected(peer_id) {
                                 continue;
                             }
                             let _ = swarm.dial(peer_id.clone());
                         }
                     }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    ChatBehaviourEvent::Mdns(mdns::Event::Expired(peers)) => {
+                        for (peer_id, _addr) in peers {
+                            tracing::info!("Peer discovered from mDNS: {peer_id}");
+                            // swarm.behaviour_mut().gossipsub.remove_explicit_peer(peer_id);
+                            if !swarm.is_connected(peer_id) {
+                                continue;
+                            }
+                            let _ = swarm.disconnect_peer_id(peer_id.clone());
+                        }
+                    }
                     _ => tracing::debug!("{event:?}"),
                 },
-                event => tracing::info!("Swarm Event: {event:?}"),
+                event => tracing::debug!("Swarm Event: {event:?}"),
             }
         }
-
-        swarm
-            .external_addresses()
-            .for_each(|a| tracing::info!("External address: {a}"));
     }
 }
 

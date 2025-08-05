@@ -5,7 +5,7 @@ use ratatui::{
     widgets::Widget,
 };
 
-use crate::event::{AppEvent, EventHandler};
+use crate::event::{self, AppEvent, EventSender};
 
 mod chats;
 mod home;
@@ -19,19 +19,13 @@ pub enum NavSection {
     Help,
 }
 
-impl Default for NavSection {
-    fn default() -> Self {
-        Self::Home(Default::default())
-    }
-}
-
 impl Handler for NavSection {
-    fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
+    fn handle_key(&mut self, event_sender: &mut EventSender, key_event: KeyEvent) -> color_eyre::Result<()> {
         match self {
-            NavSection::Home(section) => section.handle_key(events, key_event),
-            NavSection::Chats(section) => section.handle_key(events, key_event),
-            NavSection::Settings(section) => section.handle_key(events, key_event),
-            NavSection::Help => {}
+            NavSection::Home(section) => section.handle_key(event_sender, key_event),
+            NavSection::Chats(section) => section.handle_key(event_sender, key_event),
+            NavSection::Settings(section) => section.handle_key(event_sender, key_event),
+            NavSection::Help => { Ok(()) }
         }
     }
 }
@@ -69,6 +63,12 @@ impl NavSection {
     }
 }
 
+impl Default for NavSection {
+    fn default() -> Self {
+        NavSection::Home(Default::default())
+    }
+}
+
 impl Widget for &NavSection {
     fn render(self, area: Rect, buf: &mut Buffer) {
         match self {
@@ -81,20 +81,20 @@ impl Widget for &NavSection {
 }
 
 pub trait Handler {
-    fn handle(&mut self, events: &mut EventHandler, event: crate::event::Event) {
+    fn handle(&mut self, event_sender: &mut EventSender, event: event::Event) -> color_eyre::Result<()> {
         match event {
-            crate::event::Event::App(_) => {}
-            crate::event::Event::Tick => {}
-            crate::event::Event::Crossterm(crossterm_event) => match crossterm_event {
+            event::Event::App(_) => Ok(()),
+            event::Event::Tick => Ok(()),
+            event::Event::Crossterm(crossterm_event) => match crossterm_event {
                 CrosstermEvent::Key(key_event) => {
-                    self.handle_key(events, key_event);
+                    self.handle_key(event_sender, key_event)
                 }
-                _ => {}
+                _ => Ok(()),
             },
         }
     }
 
-    fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent);
+    fn handle_key(&mut self, event_sender: &mut EventSender, key_event: KeyEvent) -> color_eyre::Result<()>;
 }
 
 pub struct State {
@@ -131,35 +131,37 @@ impl Widget for &State {
 }
 
 impl Handler for State {
-    fn handle(&mut self, events: &mut EventHandler, event: crate::event::Event) {
-        self.section.handle(events, event.clone());
+    fn handle(&mut self, event_sender: &mut EventSender, event: crate::event::Event) -> color_eyre::Result<()> {
+        self.section.handle(event_sender, event.clone())?;
         match event {
-            crate::event::Event::App(_) => {}
-            crate::event::Event::Tick => {}
+            crate::event::Event::App(_) => Ok(()),
+            crate::event::Event::Tick => Ok(()),
             crate::event::Event::Crossterm(crossterm_event) => match crossterm_event {
                 CrosstermEvent::Key(key_event) => {
-                    self.handle_key(events, key_event);
+                    self.handle_key(event_sender, key_event)
                 }
-                _ => {}
+                _ => Ok(()),
             },
         }
 
     }
 
-    fn handle_key(&mut self, events: &mut EventHandler, key_event: KeyEvent) {
+    fn handle_key(&mut self, event_sender: &mut EventSender, key_event: KeyEvent) -> color_eyre::Result<()> {
         match key_event.code {
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
-                events.send(AppEvent::Quit);
+                event_sender.send(AppEvent::Quit)
             }
             KeyCode::Right if key_event.modifiers == KeyModifiers::SHIFT => {
                 self.section = self.section.next(&self);
                 self.nav_bar.navigate(&self.section);
+                Ok(())
             }
             KeyCode::Left if key_event.modifiers == KeyModifiers::SHIFT => {
                 self.section = self.section.prev(&self);
                 self.nav_bar.navigate(&self.section);
+                Ok(())
             }
-            _ => {},
+            _ => { Ok(()) },
         }
     }
 }

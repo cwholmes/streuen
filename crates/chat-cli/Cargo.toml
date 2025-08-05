@@ -5,6 +5,7 @@ rust-version.workspace = true
 edition.workspace = true
 
 [dependencies]
+cli-clipboard = { workspace = true }
 color-eyre = { workspace = true }
 crossterm = { workspace = true, features = ["event-stream"] }
 directories = { workspace = true }

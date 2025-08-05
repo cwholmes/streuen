@@ -61,7 +61,7 @@ impl App {
             if event.should_quit() {
                 self.quit();
             } else {
-                self.ui_state.handle(&mut self.events, event);
+                self.ui_state.handle(&mut self.events.sender(), event)?;
             }
         }
         Ok(())

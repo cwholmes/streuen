@@ -1,4 +1,4 @@
-use color_eyre::eyre::OptionExt;
+use color_eyre::eyre::{Context, OptionExt};
 use futures::{FutureExt, StreamExt};
 use ratatui::crossterm::event::Event as CrosstermEvent;
 use std::time::Duration;
@@ -44,12 +44,26 @@ pub enum AppEvent {
     Quit,
 }
 
+#[derive(Debug, Clone)]
+pub struct EventSender {
+    sender: mpsc::UnboundedSender<Event>,
+}
+
+impl EventSender {
+
+    /// Queue an app event to be sent to the event receiver.
+    ///
+    /// This is useful for sending events to the event handler which will be processed by the next
+    /// iteration of the application's event loop.
+    pub fn send(&mut self, app_event: AppEvent) -> color_eyre::Result<()> {
+        self.sender.send(Event::App(app_event)).wrap_err("Failed to send app event.")
+    }
+}
+
 /// Terminal event handler.
 #[derive(Debug)]
 pub struct EventHandler {
-    /// Event sender channel.
-    sender: mpsc::UnboundedSender<Event>,
-    /// Event receiver channel.
+    sender: EventSender,
     receiver: mpsc::UnboundedReceiver<Event>,
 }
 
@@ -59,7 +73,7 @@ impl EventHandler {
         let (sender, receiver) = mpsc::unbounded_channel();
         let actor = EventTask::new(sender.clone());
         tokio::spawn(async { actor.run().await });
-        Self { sender, receiver }
+        Self { sender: EventSender { sender }, receiver }
     }
 
     /// Receives an event from the sender.
@@ -85,7 +99,11 @@ impl EventHandler {
     pub fn send(&mut self, app_event: AppEvent) {
         // Ignore the result as the reciever cannot be dropped while this struct still has a
         // reference to it
-        let _ = self.sender.send(Event::App(app_event));
+        let _ = self.sender.send(app_event);
+    }
+
+    pub fn sender(&self) -> EventSender {
+        self.sender.clone()
     }
 }
 

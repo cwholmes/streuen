@@ -28,7 +28,7 @@ impl ProjectConfig {
         let data_folder = std::env::var("STREUEN_CHAT_DATA".to_string())
             .ok()
             .map(PathBuf::from);
-        let directory = if let Some(s) = data_folder.clone() {
+        let directory = if let Some(s) = data_folder {
             s
         } else if let Some(proj_dirs) = project_dirs {
             proj_dirs.data_local_dir().to_path_buf()

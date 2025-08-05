@@ -3,13 +3,14 @@ use libp2p::{
     core::{Endpoint, transport::PortUse},
     dcutr, gossipsub, identify,
     identity::Keypair,
-    kad, mdns, relay, request_response,
+    kad, relay, request_response,
     swarm::{
         ConnectionDenied, ConnectionId, FromSwarm, NetworkBehaviour, THandler, THandlerInEvent,
         THandlerOutEvent, ToSwarm, behaviour::toggle::Toggle, dummy,
     },
-    upnp,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use libp2p::{mdns, upnp};
 use serde::{Deserialize, Serialize};
 
 use std::{
@@ -54,13 +55,17 @@ impl ChatBehaviour {
 
         let kad = kad::Behaviour::new(local_peer_id, kad::store::MemoryStore::new(local_peer_id));
 
-        let gossipsub = gossipsub::Behaviour::new(
+        let mut gossipsub = gossipsub::Behaviour::new(
             gossipsub::MessageAuthenticity::Signed(keypair.clone()),
             gossipsub::Config::default(),
         )?;
 
+        let streuen_topic = gossipsub::IdentTopic::new("streuen-topic-123");
+
+        let _ = gossipsub.subscribe(&streuen_topic)?;
+
         let identify = identify::Behaviour::new(identify::Config::new(
-            "streuen/0.1.0".to_string(),
+            "streuen/chat/0.1.0".to_string(),
             keypair.public(),
         ));
 
